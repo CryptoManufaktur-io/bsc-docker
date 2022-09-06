@@ -1,0 +1,37 @@
+version: "3.4"
+services:
+  geth:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILD_TARGET=${GETH_BUILD_TARGET}
+    user: "10000"
+    stop_grace_period: 1m
+    image: geth:local
+    volumes:
+      - geth-data:/home/bsc/data
+    ports:
+      - 30303:30303
+      - 30311:30311
+      - 8545:8545
+      - 8546:8546
+      - 8575:8575
+      - 8576:8576
+    entrypoint:
+       - docker-entrypoint.sh
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.geth.service=geth
+      - traefik.http.routers.geth.entrypoints=websecure
+      - traefik.http.routers.geth.rule=Host(`${RPC_HOST}.${DOMAIN}`)
+      - traefik.http.routers.geth.tls.certresolver=letsencrypt
+      - traefik.http.routers.gethlb.service=geth
+      - traefik.http.routers.gethlb.entrypoints=websecure
+      - traefik.http.routers.gethlb.rule=Host(`${RPC_LB}.${DOMAIN}`)
+      - traefik.http.routers.gethlb.tls.certresolver=letsencrypt
+      - traefik.http.services.geth.loadbalancer.server.port=${RPC_PORT}
+
+volumes:
+  geth-data:
