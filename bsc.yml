@@ -13,25 +13,57 @@ services:
     volumes:
       - geth-data:/home/bsc/data
     ports:
-      - 30303:30303
-      - 30311:30311
-      - 8545:8545
-      - 8546:8546
-      - 8575:8575
-      - 8576:8576
+      - 30311:30311/tcp
+      - 30311:30311/udp
     entrypoint:
-       - docker-entrypoint.sh
+      - docker-entrypoint.sh
+      - geth
+      - --config
+      - /home/bsc/config.toml
+      - --datadir
+      - /home/bsc/data
+      - --cache
+      - "8000"
+      - --http
+      - --http.addr
+      - 0.0.0.0
+      - --http.vhosts='*'
+#      - --http.api
+#      - web3,eth,net
+      - --http.port
+      - ${RPC_PORT:-8545}
+      - --ws
+      - --ws.addr
+      - 0.0.0.0
+      - --ws.port
+      - ${WS_PORT:-8546}
+      - --ws.api
+      - web3,eth,net
+      - --rpc.allow-unprotected-txs
+      - --txlookuplimit
+      - "0"
+      - --diffsync
+      - --ipcdisable
     labels:
       - traefik.enable=true
-      - traefik.http.routers.geth.service=geth
-      - traefik.http.routers.geth.entrypoints=websecure
-      - traefik.http.routers.geth.rule=Host(`${RPC_HOST}.${DOMAIN}`)
-      - traefik.http.routers.geth.tls.certresolver=letsencrypt
-      - traefik.http.routers.gethlb.service=geth
-      - traefik.http.routers.gethlb.entrypoints=websecure
-      - traefik.http.routers.gethlb.rule=Host(`${RPC_LB}.${DOMAIN}`)
-      - traefik.http.routers.gethlb.tls.certresolver=letsencrypt
-      - traefik.http.services.geth.loadbalancer.server.port=${RPC_PORT}
+      - traefik.http.routers.bsc.service=bsc
+      - traefik.http.routers.bsc.entrypoints=websecure
+      - traefik.http.routers.bsc.rule=Host(`${RPC_HOST}.${DOMAIN}`)
+      - traefik.http.routers.bsc.tls.certresolver=letsencrypt
+      - traefik.http.routers.bsclb.service=bsc
+      - traefik.http.routers.bsclb.entrypoints=websecure
+      - traefik.http.routers.bsclb.rule=Host(`${RPC_LB}.${DOMAIN}`)
+      - traefik.http.routers.bsclb.tls.certresolver=letsencrypt
+      - traefik.http.services.bsc.loadbalancer.server.port=${RPC_PORT}
+      - traefik.http.routers.bscws.service=bscws
+      - traefik.http.routers.bscws.entrypoints=websecure
+      - traefik.http.routers.bscws.rule=Host(`${WS_HOST}.${DOMAIN}`)
+      - traefik.http.routers.bscws.tls.certresolver=letsencrypt
+      - traefik.http.routers.bscwslb.service=bscws
+      - traefik.http.routers.bscwslb.entrypoints=websecure
+      - traefik.http.routers.bscwslb.rule=Host(`${WS_LB}.${DOMAIN}`)
+      - traefik.http.routers.bscwslb.tls.certresolver=letsencrypt
+      - traefik.http.services.bscws.loadbalancer.server.port=${WS_PORT}
 
 volumes:
   geth-data:
