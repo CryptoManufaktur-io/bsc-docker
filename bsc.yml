@@ -27,9 +27,8 @@ services:
       - --http
       - --http.addr
       - 0.0.0.0
-      - --http.vhosts='*'
-#      - --http.api
-#      - web3,eth,net
+      - --http.vhosts=*
+      - --http.corsdomain=*
       - --http.port
       - ${RPC_PORT:-8545}
       - --ws
