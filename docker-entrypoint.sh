@@ -10,6 +10,8 @@ fi
 
 dasel delete -f config.toml Node.LogConfig
 dasel delete -f config.toml Node.HTTPHost
+dasel delete -f config.toml Node.HTTPVirtualHosts
+dasel delete -f config.toml Node.NoUSB
 echo 'Setup done!'
 
 exec "$@"
