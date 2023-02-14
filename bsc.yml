@@ -1,4 +1,4 @@
-version: "3.4"
+version: "3.9"
 services:
   geth:
     restart: unless-stopped
@@ -9,7 +9,7 @@ services:
         - BUILD_TARGET=${GETH_BUILD_TARGET}
     user: "10000"
     stop_grace_period: 1m
-    image: geth:local
+    image: bsc-geth:local
     volumes:
       - geth-data:/home/bsc/data
     ports:
@@ -63,6 +63,16 @@ services:
       - traefik.http.routers.bscwslb.rule=Host(`${WS_LB}.${DOMAIN}`)
       - traefik.http.routers.bscwslb.tls.certresolver=letsencrypt
       - traefik.http.services.bscws.loadbalancer.server.port=${WS_PORT}
+
+  set-prune-marker:
+    profiles: ["tools"]
+    image: alpine:3
+    user: "10001:10001"
+    restart: "no"
+    volumes:
+      - geth-data:/home/bsc/data
+    entrypoint: ["/bin/sh","-c"]
+    command: /bin/sh
 
 volumes:
   geth-data:
