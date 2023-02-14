@@ -14,4 +14,13 @@ dasel delete -f config.toml Node.HTTPVirtualHosts
 dasel delete -f config.toml Node.NoUSB
 echo 'Setup done!'
 
-exec "$@"
+if [ -f /home/bsc/data/prune-marker ]; then
+  rm -f /home/bsc/data/prune-marker
+# Word splitting is desired for the command line parameters
+# shellcheck disable=SC2086
+  exec "$@" snapshot prune-state
+else
+# Word splitting is desired for the command line parameters
+# shellcheck disable=SC2086
+  exec "$@"
+fi
