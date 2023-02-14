@@ -24,6 +24,11 @@ services:
       - /home/bsc/data
       - --cache
       - "8000"
+      - --metrics
+      - --metrics.addr
+      - 0.0.0.0
+      - --metrics.port
+      - "6060"
       - --http
       - --http.addr
       - 0.0.0.0
@@ -63,6 +68,9 @@ services:
       - traefik.http.routers.bscwslb.rule=Host(`${WS_LB}.${DOMAIN}`)
       - traefik.http.routers.bscwslb.tls.certresolver=letsencrypt
       - traefik.http.services.bscws.loadbalancer.server.port=${WS_PORT}
+      - metrics_scrape=true
+      - metrics_path=/debug/metrics/prometheus
+      - metrics_port=6060
 
   set-prune-marker:
     profiles: ["tools"]
