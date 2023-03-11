@@ -9,7 +9,7 @@ services:
         - BUILD_TARGET=${GETH_BUILD_TARGET}
     user: "10000"
     stop_grace_period: 1m
-    image: geth:local
+    image: bsc-geth:local
     volumes:
       - geth-data:/home/bsc/data
     ports:
