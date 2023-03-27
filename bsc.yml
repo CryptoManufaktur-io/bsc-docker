@@ -43,10 +43,8 @@ services:
       - ${WS_PORT:-8546}
       - --ws.api
       - web3,eth,net
-      - --rpc.allow-unprotected-txs
       - --txlookuplimit
       - "0"
-      - --ipcdisable
     labels:
       - traefik.enable=true
       - traefik.http.routers.bsc.service=bsc
