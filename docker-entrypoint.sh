@@ -38,6 +38,8 @@ case ${LOG_LEVEL} in
     ;;
 esac
 
+__public_ip=$(curl -s ifconfig.me/ip)
+
 if [ -f /home/bsc/data/prune-marker ]; then
   rm -f /home/bsc/data/prune-marker
 # Word splitting is desired for the command line parameters
@@ -51,5 +53,5 @@ else
   fi
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-  exec "$@" ${__verbosity}
+  exec "$@" --nat extip:${__public_ip} ${__verbosity}
 fi
