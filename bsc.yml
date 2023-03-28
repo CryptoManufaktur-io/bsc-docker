@@ -17,6 +17,7 @@ services:
       - 30311:30311/udp
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - SNAPSHOT_FILE=${SNAPSHOT_FILE:-}
     entrypoint:
       - docker-entrypoint.sh
       - geth
