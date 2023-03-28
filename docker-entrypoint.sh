@@ -45,7 +45,7 @@ if [ -f /home/bsc/data/prune-marker ]; then
   exec "$@" snapshot prune-state
 else
   if [ ! -f /home/bsc/data/setupdone ]; then
-    wget -q -O - "${SNAPSHOT_FILE}" | tar -I lz4 xvf - -C /home/bsc/data
+    wget -q -O - "${SNAPSHOT_FILE}" | tar -I lz4 -xvf - -C /home/bsc/data
     touch /home/bsc/data/setupdone
   fi
 # Word splitting is desired for the command line parameters
