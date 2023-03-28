@@ -8,7 +8,7 @@ WORKDIR /src
 RUN bash -c "git clone https://github.com/bnb-chain/bsc.git && cd bsc && git config advice.detachedHead false && git fetch --all --tags && git checkout ${BUILD_TARGET} && make geth"
 
 # Get dasel
-FROM ghcr.io/tomwright/dasel:v2.1.1 as dasel
+FROM ghcr.io/tomwright/dasel:v2.1.2 as dasel
 
 # Pull all binaries into a second stage deploy container
 FROM debian:bullseye-slim
