@@ -48,6 +48,8 @@ services:
       - web3,eth,net
       - --txlookuplimit
       - "0"
+      - --maxpeers
+      - ${MAX_PEERS}
     labels:
       - traefik.enable=true
       - traefik.http.routers.bsc.service=bsc
