@@ -16,7 +16,7 @@ FROM debian:bullseye-slim
 ARG USER=bsc
 ARG UID=10000
 
-RUN apt-get update && apt-get install -y ca-certificates bash tzdata hwloc libhwloc-dev wget curl unzip lz4
+RUN apt-get update && apt-get install -y ca-certificates bash tzdata hwloc libhwloc-dev wget curl unzip lz4 jq
 
 # See https://stackoverflow.com/a/55757473/12429735RUN
 RUN adduser \
