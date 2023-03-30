@@ -13,8 +13,12 @@ dasel delete -f config.toml Node.HTTPHost
 dasel delete -f config.toml Node.HTTPVirtualHosts
 dasel delete -f config.toml Node.NoUSB
 
-# Set static nodes
+# Set static nodes, and also as trusted nodes
 curl -s https://api.binance.org/v1/discovery/peers | jq .peers >/home/bsc/data/static-nodes.json
+for string in $(cat /home/bsc/data/static-nodes.json | jq -r .[]); do
+  dasel put -v $(echo $string) -f config.toml 'Node.P2P.StaticNodes.[]'
+done
+dasel put -f config.toml -t json -v "$(cat /home/bsc/data/static-nodes.json)" Node.P2P.TrustedNodes
 
 # Set verbosity
 shopt -s nocasematch
