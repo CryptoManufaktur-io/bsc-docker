@@ -12,7 +12,9 @@ dasel delete -f config.toml Node.LogConfig
 dasel delete -f config.toml Node.HTTPHost
 dasel delete -f config.toml Node.HTTPVirtualHosts
 dasel delete -f config.toml Node.NoUSB
-echo 'Setup done!'
+
+# Set static nodes
+curl -s https://api.binance.org/v1/discovery/peers | jq .peers >/home/bsc/data/static-nodes.json
 
 # Set verbosity
 shopt -s nocasematch
