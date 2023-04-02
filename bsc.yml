@@ -18,6 +18,7 @@ services:
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - SNAPSHOT_FILE=${SNAPSHOT_FILE:-}
+      - EXTRA_STATIC_NODES=${EXTRA_STATIC_NODES:-}
     entrypoint:
       - docker-entrypoint.sh
       - geth
