@@ -19,6 +19,12 @@ for string in $(cat /home/bsc/data/static-nodes.json | jq -r .[]); do
   dasel put -v $(echo $string) -f config.toml 'Node.P2P.StaticNodes.[]'
 done
 dasel put -f config.toml -t json -v "$(cat /home/bsc/data/static-nodes.json)" Node.P2P.TrustedNodes
+if [ -n "${EXTRA_STATIC_NODES}" ]; then
+  for string in $(echo "${EXTRA_STATIC_NODES}" | jq -r .[]); do
+    dasel put -v $(echo $string) -f config.toml 'Node.P2P.StaticNodes.[]'
+    dasel put -v $(echo $string) -f config.toml 'Node.P2P.TrustedNodes.[]'
+  done
+fi
 
 # Set verbosity
 shopt -s nocasematch
