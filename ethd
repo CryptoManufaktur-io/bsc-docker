@@ -320,7 +320,7 @@ envmigrate() {
     # Migrate over user settings
     for var in "${ALL_VARS[@]}"; do
         value=$(sed -n -e "s/^${var}=\(.*\)/\1/p" ".env.source" || true)
-        if [ -n "${value}" ]; then
+        if [ -n "${value}" ] || [ "${var}" = "EXTRA_STATIC_NODES" ]; then
             sed -i'.original' -e "s~^\(${var}\s*=\s*\).*$~\1${value}~" "${ENV_FILE}"
         fi
     done
