@@ -13,9 +13,14 @@ dasel delete -f config.toml Node.HTTPHost
 dasel delete -f config.toml Node.HTTPVirtualHosts
 dasel delete -f config.toml Node.NoUSB
 
+# Duplicate binance-supplied static nodes to trusted nodes
+for string in $(dasel -f config.toml -w json 'Node.P2P.StaticNodes' | jq -r .[]); do
+  dasel put -v $(echo $string) -f config.toml 'Node.P2P.TrustedNodes.[]'
+done
+
 # Set user-supplied static nodes, and also as trusted nodes
 if [ -n "${EXTRA_STATIC_NODES}" ]; then
-  for string in $(echo "${EXTRA_STATIC_NODES}" | jq -r .[]); do
+  for string in $(jq -r .[] <<< "${EXTRA_STATIC_NODES}"); do
     dasel put -v $(echo $string) -f config.toml 'Node.P2P.StaticNodes.[]'
     dasel put -v $(echo $string) -f config.toml 'Node.P2P.TrustedNodes.[]'
   done
