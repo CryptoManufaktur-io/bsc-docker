@@ -136,8 +136,7 @@ check_for_snap() {
         echo "The exact steps depend a little on whether there already is"
         echo "an apt version of docker installed as well, but in a nutshell"
         echo '"./ethd stop" followed by "sudo snap remove --purge docker"'
-        echo "and then a reboot, and as needed install docker.io or docker-ce with apt,"
-        echo "re-import keys and restart eth-docker."
+        echo "and then a reboot, and as needed install docker.io or docker-ce with apt."
         echo
         echo "Do join us on EthStaker Discord to work through this issue."
         echo
@@ -349,7 +348,7 @@ find the original contents in ${ENV_FILE}.bak."
         echo
         echo "WARNING"
         echo
-        echo "You have uncommitted local changes to eth-docker, which keeps updates from coming in."
+        echo "You have uncommitted local changes to bsc-docker, which keeps updates from coming in."
         echo "Please undo these changes or \"git commit\" them."
         echo "These are the files with local changes:"
         echo
@@ -594,7 +593,7 @@ printhelp() {
     echo "  install"
     echo "     attempts to install docker and docker-compose for you"
     echo "  update "
-    echo "     updates all client versions and eth-docker itself"
+    echo "     updates all client versions and bsc-docker itself"
     echo "  up (or start)"
     echo "     starts the BSC node, or restarts containers that had their image or"
     echo "     configuration changed"
@@ -661,11 +660,6 @@ if [ "$command" = "install" ]; then
     exit "$?"
 fi
 
-if ! type -P whiptail >/dev/null 2>&1; then
-    echo "Please install the package whiptail or newt before running this script"
-    exit 1
-fi
-
 if ! dodocker images >/dev/null 2>&1; then
     echo "Please ensure you can call $__docker_exe before running this script."
     exit 1
@@ -691,7 +685,7 @@ value=$(sed -n -e "s/^${var}=\(.*\)/\1/p" ".env" || true)
 if [ "${value}" = true ] && [ "${__old_compose}" -eq 1 ]; then
   echo
   echo "You are using docker-compose ${__compose_version}, which is unsupported by Docker, Inc. from June 2023 on."
-  echo "A switch to docker-ce is recommended. It is *not* mandatory. This is unfortunately a manual step that eth-docker cannot do for you."
+  echo "A switch to docker-ce is recommended. It is *not* mandatory. This is unfortunately a manual step that bsc-docker cannot do for you."
   echo "Please see https://eth-docker.net/Usage/Prerequisites#switching-from-dockerio-to-docker-ce for instructions."
   echo "You can turn this message off by adjusting COMPOSEV1_NAG in .env"
 fi
