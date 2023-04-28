@@ -422,7 +422,7 @@ down() {
 
 terminate() {
     while true; do
-        read -rp "WARNING - this action will destroy all data stores for this Fantom node. Do you wish to continue? (No/Yes) " yn
+        read -rp "WARNING - this action will destroy all data stores for this BSC node. Do you wish to continue? (No/Yes) " yn
         case $yn in
             [Yy]es ) break;;
             * ) echo "Aborting, no changes made"; exit 1;;
