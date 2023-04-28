@@ -50,10 +50,12 @@ determine_docker() {
 }
 
 determine_compose() {
-# This is mainly for Debian and docker-ce, where docker-compose does not exist
-  if ! type -P docker-compose >/dev/null 2>&1; then
+# Check for Compose V2 (docker compose) vs Compose V1 (docker-compose)
+  if docker compose version >/dev/null 2>&1; then
     __compose_exe="docker compose"
+    __old_compose=0
   else
+    __old_compose=1
     __compose_version=$($__maybe_sudo docker-compose --version | sed -n -e "s/.*version [v]\?\([0-9.-]*\).*/\1/p")
     __compose_version_major=$(echo "$__compose_version" | cut -f1 -d.)
     __compose_version_minor=$(echo "$__compose_version" | cut -f2 -d.)
@@ -146,6 +148,7 @@ check_for_snap() {
 
 install() {
     check_for_snap
+    set -e
     while true; do
         read -rp "This will attempt to install docker and make your user part of the docker group. Do you wish to continue? (no/yes) " yn
         case $yn in
@@ -155,11 +158,16 @@ install() {
     done
     if [[ "$__distro" = "ubuntu" ]]; then
         __major_version=$(lsb_release -r | cut -d: -f2 | sed s/'^\t'// | cut -d. -f1)
-        if [ "${__major_version}" -lt 18 ]; then
+        if [ "${__major_version}" -lt 20 ]; then
             echo "This script cannot install docker on Ubuntu ${__major_version}. Consider upgrading to 22.04 or 20.04"
         fi
         if [ -z "$(which docker)" ]; then
-            ${__auto_sudo} apt-get update && ${__auto_sudo} apt-get install -y ca-certificates curl gnupg lsb-release whiptail bc
+            ${__auto_sudo} apt-get update && ${__auto_sudo} apt-get install -y ca-certificates curl gnupg lsb-release whiptail bc chrony
+            __major_version=$(lsb_release -r | cut -f2)
+            if [ "${__major_version}" -lt 10 ]; then
+                echo "This script cannot install docker on Debian ${__major_version}. Consider upgrading to 11 or 12."
+                exit 0
+            fi
             ${__auto_sudo} mkdir -p /etc/apt/keyrings
             ${__auto_sudo} curl -fsSL https://download.docker.com/linux/ubuntu/gpg | ${__auto_sudo} gpg --dearmor -o /etc/apt/keyrings/docker.gpg
             ${__auto_sudo} echo \
@@ -182,7 +190,7 @@ install() {
     elif [[ "$__distro" =~ "debian" ]]; then
         if [ -z "$(which docker)" ]; then
             ${__auto_sudo} apt-get update
-            ${__auto_sudo} apt-get -y install ca-certificates curl gnupg lsb-release whiptail bc
+            ${__auto_sudo} apt-get -y install ca-certificates curl gnupg lsb-release whiptail bc chrony
             ${__auto_sudo} mkdir -p /etc/apt/keyrings
             ${__auto_sudo} curl -fsSL https://download.docker.com/linux/debian/gpg | ${__auto_sudo} gpg --dearmor -o /etc/apt/keyrings/docker.gpg
             ${__auto_sudo} echo \
@@ -194,10 +202,58 @@ install() {
         else
             echo "Docker is already installed"
         fi
+        __groups=$(${__as_owner} groups)
+        if [[ ! "$__groups" =~ "docker" ]]; then
+            echo "Making your user part of the docker group"
+            ${__auto_sudo} usermod -aG docker "${OWNER}"
+            echo "Please run newgrp docker or log out and back in"
+        else
+            echo "Your user is already part of the docker group"
+        fi
     else
         echo "This script does not know how to install docker on $__distro"
     fi
+    set +e
     return 0
+}
+
+# Warn user if space is low, so they can prune
+check_disk_space() {
+    __docker_dir=$(dodocker system info --format '{{.DockerRootDir}}')
+    __free_space=$(df -P "${__docker_dir}" | awk '/[0-9]%/{print $(NF-2)}')
+
+    re='^[0-9]+$'
+    if ! [[ "${__free_space}" =~ $re ]] ; then
+        echo "Unable to determine free disk space. This is likely a bug."
+        echo "df reports $(df -P "${__docker_dir}") and __free_space is ${__free_space}"
+        return
+    fi
+
+    var="COMPOSE_FILE"
+    value=$(sed -n -e "s/^${var}=\(.*\)/\1/p" ".env" || true)
+
+# Literal match intended
+# shellcheck disable=SC2076
+    if [[ "${value}" =~ "bsc.yml" ]] && [[ "${__free_space}" -lt 104857600 ]]; then
+        echo ""
+        echo "You are running BSC Geth and have less than 100 GiB of free disk space."
+        echo "If Avail reads 40 GiB or more, prune with ./ethd prune-geth:"
+        echo ""
+        df -h "${__docker_dir}"
+        echo ""
+        echo "If it's less than 40 GiB, you may need to resync Geth from scratch."
+        echo ""
+    elif [[ "${__free_space}" -lt 52428800 ]]; then
+        echo ""
+        echo "You have less than 50 GiB of free disk space:"
+        echo ""
+        df -h "${__docker_dir}"
+        echo ""
+        echo "Pruning does not appear an option for your client mix."
+        echo "A resync may help."
+        echo "If total space is less than 1.5 TiB, consider cloning to a larger drive."
+        echo ""
+    fi
 }
 
 # Arguments are passed, but shellcheck doesn't recognize that
@@ -208,6 +264,32 @@ update() {
     else
         __dirty=0
     fi
+
+    __free_space=$(df -P "$(pwd)" | awk '/[0-9]%/{print $(NF-2)}')
+
+    re='^[0-9]+$'
+    if ! [[ "${__free_space}" =~ $re ]] ; then
+        echo "Unable to determine free disk space. This is likely a bug."
+        echo "df reports $(df -P "$(pwd)") and __free_space is ${__free_space}"
+    elif [ "$(df -P "$(pwd)" | awk '/[0-9]%/{print $(NF-2)}')" -lt 1024 ]; then
+        echo "You have less than 1 MiB of space left on $(pwd)."
+        echo "Aborting, as an update is not safe."
+        exit 1
+    fi
+
+    __docker_dir=$(dodocker system info --format '{{.DockerRootDir}}')
+    __free_space=$(df -P "${__docker_dir}" | awk '/[0-9]%/{print $(NF-2)}')
+
+    re='^[0-9]+$'
+    if ! [[ "${__free_space}" =~ $re ]] ; then
+        echo "Unable to determine free disk space. This is likely a bug."
+        echo "df reports $(df -P "${__docker_dir}") and __free_space is ${__free_space}"
+    elif [ "${__free_space}" -lt 1048576 ]; then
+        echo "You have less than 1 GiB of space left on ${__docker_dir}."
+        echo "Aborting, as an update is not safe."
+        exit 1
+    fi
+
     if [ -z "${ETHDSECUNDO-}" ]; then
         if ${__as_owner} git branch | grep -q master; then
             ${__as_owner} git branch -m master main
@@ -227,31 +309,29 @@ update() {
 
     envmigrate
 
-    cmd build --pull
-    cmd --profile tools build --pull
-    exec 3>&1
-    exec 4>&2
-    exec 1> /dev/null
-    exec 2> /dev/null
-    docompose pull || true
-    exec 1>&3
-    exec 2>&4
-    echo
-    echo "Your ${ENV_FILE} configuration settings have been migrated to a fresh copy. You can \
-find the original contents in ${ENV_FILE}.bak."
+    dodocker system prune --force
+    if [ ${__old_compose} -eq 1 ]; then
+      docompose --profile tools pull --ignore-pull-failures
+    else
+      docompose --profile tools pull --ignore-buildable
+    fi
+    docompose build --pull --no-cache geth
+    docompose --profile tools build --pull
 
-    echo
-    cmp -s "${ENV_FILE}" "${ENV_FILE}".bak
-    if [ $? -ne 0 ]; then
+    if ! cmp -s "${ENV_FILE}" "${ENV_FILE}".source; then
+        cp "${ENV_FILE}".source "${ENV_FILE}".bak
+        rm "${ENV_FILE}".source
+        echo "Your ${ENV_FILE} configuration settings have been migrated to a fresh copy. You can \
+find the original contents in ${ENV_FILE}.bak."
+        echo
         echo "List of changes made to ${ENV_FILE} during migration - current on left, original on right:"
         echo
         diff -y --suppress-common-lines "${ENV_FILE}" "${ENV_FILE}".bak
     else
-        echo "No changes made to ${ENV_FILE} during migration"
+        echo "No changes made to ${ENV_FILE} during update"
+        rm "${ENV_FILE}".source
     fi
-    echo
-    echo "Your ${ENV_FILE} configuration settings have been migrated to a fresh copy. You can \
-find the original contents in ${ENV_FILE}.bak."
+
     echo
     echo "An ./ethd up command will start using the new images and configuration."
     if [[ "$__distro" = "ubuntu" ]]; then
@@ -264,23 +344,6 @@ find the original contents in ${ENV_FILE}.bak."
     fi
 
     unset ETHDSECUNDO
-    if [[ "${ETHDSWITCHED-}" -eq 1 ]]; then
-        unset ETHDSWITCHED
-        echo
-        echo "You were migrated to the $(${__as_owner} git name-rev --name-only HEAD) branch of eth-docker"
-        echo
-    fi
-    # If this is called by an older version of ethd, envmigrate
-    # is in its own bash instance: Need to kill the ethd parent
-# shellcheck disable=SC2009
-    if ps $PPID | grep -q "ethd"; then
-        echo
-        echo "Updated from an older version of eth-docker. You'll see \"Terminated\","
-        echo "which keeps the update from running twice. This is normal and will"
-        echo "only happen this once."
-        echo
-        kill $PPID
-    fi
     check_for_snap
     if [ "${__dirty}" -eq 1 ]; then
         echo
@@ -304,18 +367,16 @@ envmigrate() {
     ALL_VARS=( COMPOSE_FILE GETH_BUILD_TARGET LOG_LEVEL EXTRA_STATIC_NODES MAX_PEERS \
             DOMAIN ACME_EMAIL CF_EMAIL CF_API_TOKEN AWS_PROFILE AWS_HOSTED_ZONE_ID \
             RPC_HOST RPC_LB WS_HOST WS_LB DDNS_SUBDOMAIN DDNS_PROXY RPC_PORT WS_PORT \
-            TRAEFIK_WEB_HTTP_PORT TRAEFIK_WEB_PORT )
+            TRAEFIK_WEB_HTTP_PORT TRAEFIK_WEB_PORT COMPOSEV1_NAG SNAPSHOT_FILE )
     OLD_VARS=( )
     NEW_VARS=( )
 
     if [ "${EUID}" -eq 0 ]; then
-      sudo -u "${OWNER}" cp "${ENV_FILE}" "${ENV_FILE}".bak
+      sudo -u "${OWNER}" cp "${ENV_FILE}" "${ENV_FILE}".source
       sudo -u "${OWNER}" cp default.env "${ENV_FILE}"
-      sudo -u "${OWNER}" cp "${ENV_FILE}".bak .env.source
     else
-      cp "${ENV_FILE}" "${ENV_FILE}".bak
+      cp "${ENV_FILE}" "${ENV_FILE}".source
       cp default.env "${ENV_FILE}"
-      cp "${ENV_FILE}".bak .env.source
     fi
     # Migrate over user settings
     for var in "${ALL_VARS[@]}"; do
@@ -332,7 +393,6 @@ envmigrate() {
             sed -i'.original' -e "s~^\(${NEW_VARS[index]}\s*=\s*\).*$~\1${value}~" "${ENV_FILE}"
         fi
     done
-    rm .env.source
     rm .env.original
 }
 
@@ -533,9 +593,8 @@ printhelp() {
     echo "subcommands:"
     echo "  install"
     echo "     attempts to install docker and docker-compose for you"
-    echo "  update [--keep-targets] "
+    echo "  update "
     echo "     updates all client versions and eth-docker itself"
-    echo "     --keep-targets will keep your custom build targets in .env"
     echo "  up (or start)"
     echo "     starts the Fantom node, or restarts containers that had their image or"
     echo "     configuration changed"
@@ -618,3 +677,21 @@ if ! docompose --help >/dev/null 2>&1; then
 fi
 
 $command "$@"
+
+__result=$?
+if [ "$__result" -eq 127 ]; then
+    printhelp
+fi
+
+check_disk_space
+
+var="COMPOSEV1_NAG"
+value=$(sed -n -e "s/^${var}=\(.*\)/\1/p" ".env" || true)
+
+if [ "${value}" = true ] && [ "${__old_compose}" -eq 1 ]; then
+  echo
+  echo "You are using docker-compose ${__compose_version}, which is unsupported by Docker, Inc. from June 2023 on."
+  echo "A switch to docker-ce is recommended. It is *not* mandatory. This is unfortunately a manual step that eth-docker cannot do for you."
+  echo "Please see https://eth-docker.net/Usage/Prerequisites#switching-from-dockerio-to-docker-ce for instructions."
+  echo "You can turn this message off by adjusting COMPOSEV1_NAG in .env"
+fi
