@@ -3,18 +3,23 @@ x-logging: &logging
   logging:
     driver: json-file
     options:
-      max-size: 10m
+      max-size: 100m
       max-file: "3"
+      tag: '{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}'
 
 services:
   traefik:
     image: traefik-aws
     build:
       context: ./traefik
-    restart: ${RESTART}
+    restart: "unless-stopped"
     command:
-#      - --log.level=DEBUG
+#      - --accesslog=true
+#      - --accesslog.format=json
+#      - --accesslog.fields.defaultmode=keep
+#      - --accesslog.fields.headers.defaultmode=keep
 #      - --certificatesResolvers.letsencrypt.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory
+      - --log.level=${LOG_LEVEL:-info}
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --certificatesresolvers.letsencrypt.acme.dnschallenge=true
@@ -25,10 +30,12 @@ services:
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
       - --entrypoints.websecure.address=:${TRAEFIK_WEB_PORT}
-      - --entrypoints.websecure.http.tls=true
-      - --entrypoints.websecure.http.tls.certResolver=letsencrypt
-      - --entrypoints.websecure.http.tls.domains[0].main=${DOMAIN}
-      - --entrypoints.websecure.http.tls.domains[0].sans=*.${DOMAIN}
+      - --metrics
+      - --metrics.prometheus
+    labels:
+      - metrics.scrape=true
+      - metrics.path=/metrics
+      - metrics.port=8080
     ports:
       - ${TRAEFIK_WEB_PORT}:${TRAEFIK_WEB_PORT}/tcp
       - ${TRAEFIK_WEB_HTTP_PORT}:${TRAEFIK_WEB_HTTP_PORT}/tcp
@@ -39,8 +46,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - certs:/letsencrypt
       - ~/.aws:/root/.aws:ro
-      - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     <<: *logging
+
 volumes:
   certs:
