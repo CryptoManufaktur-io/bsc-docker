@@ -1,5 +1,5 @@
 # Build Geth in a stock Go builder container
-FROM golang:1.19-bullseye as builder
+FROM golang:1.20-bullseye as builder
 
 ARG BUILD_TARGET
 
