@@ -11,7 +11,6 @@ fi
 dasel delete -f config.toml Node.LogConfig
 dasel delete -f config.toml Node.HTTPHost
 dasel delete -f config.toml Node.HTTPVirtualHosts
-dasel delete -f config.toml Node.NoUSB
 
 # Duplicate binance-supplied static nodes to trusted nodes
 for string in $(dasel -f config.toml -w json 'Node.P2P.StaticNodes' | jq -r .[]); do
