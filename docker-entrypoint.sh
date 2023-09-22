@@ -54,9 +54,9 @@ else
     mkdir -p /home/bsc/data/snapshot
     aria2c -c -s14 -x14 -k100M -d /home/bsc/data/snapshot --auto-file-renaming=false --conditional-get=true \
       --allow-overwrite=true "${SNAPSHOT_FILE}"
-    tar -I lz4 -xvf "/home/bsc/data/snapshot/${SNAPSHOT_FILE}" -C /home/bsc/data
+    tar -I lz4 -xvf "/home/bsc/data/snapshot/$(basename "${SNAPSHOT_FILE}")" -C /home/bsc/data
     mv /home/bsc/data/server/data-seed/geth /home/bsc/data/
-    rm "/home/bsc/data/snapshot/${SNAPSHOT_FILE}"
+    rm "/home/bsc/data/snapshot/$(basename "${SNAPSHOT_FILE}")"
     touch /home/bsc/data/setupdone
   fi
 
