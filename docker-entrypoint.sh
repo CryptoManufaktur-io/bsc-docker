@@ -60,7 +60,7 @@ else
   fi
 
   # Sync from genesis if no snapshot was downloaded, above
-  if [ -z "$(ls -A /home/bsc/data)" ]; then
+  if [ ! -d /home/bsc/data/geth ]; then
     geth --datadir /home/bsc/data init genesis.json
   fi
 
