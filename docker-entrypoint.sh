@@ -4,10 +4,6 @@ wget $(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep 
 unzip -o mainnet.zip
 rm mainnet.zip
 
-if [ -z "$(ls -A /home/bsc/data)" ]; then
-    geth --datadir /home/bsc/data init genesis.json
-fi
-
 # Duplicate binance-supplied static nodes to trusted nodes
 for string in $(dasel -f config.toml -w json 'Node.P2P.StaticNodes' | jq -r .[]); do
   dasel put -v $(echo $string) -f config.toml 'Node.P2P.TrustedNodes.[]'
@@ -53,11 +49,21 @@ if [ -f /home/bsc/data/prune-marker ]; then
 # shellcheck disable=SC2086
   exec "$@" snapshot prune-state
 else
-  if [ ! -f /home/bsc/data/setupdone ]; then
-    wget -q -O - "${SNAPSHOT_FILE}" | tar -I lz4 -xvf - -C /home/bsc/data
+  if [ -n "${SNAPSHOT_FILE}" ] && [ ! -f /home/bsc/data/setupdone ]; then
+    mkdir -p /home/bsc/data/snapshot
+    cd /home/bsc/data/snapshot
+    aria2c -c -x6 -s6 --auto-file-renaming=false --conditional-get=true --allow-overwrite=true "${SNAPSHOT_FILE}"
+    tar -I lz4 -xvf  "${SNAPSHOT_FILE}" -C /home/bsc/data
     mv /home/bsc/data/server/data-seed/geth /home/bsc/data/
+    rm "${SNAPSHOT_FILE}"
     touch /home/bsc/data/setupdone
   fi
+
+  # Sync from genesis if no snapshot was downloaded, above
+  if [ -z "$(ls -A /home/bsc/data)" ]; then
+    geth --datadir /home/bsc/data init genesis.json
+  fi
+
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
   exec "$@" --nat extip:${__public_ip} ${__verbosity}
