@@ -51,7 +51,7 @@ if [ -f /home/bsc/data/prune-marker ]; then
 else
   if [ -n "${SNAPSHOT_FILE}" ] && [ ! -f /home/bsc/data/setupdone ]; then
     mkdir -p /home/bsc/data/snapshot
-    aria2c -c -x6 -s6 -d /home/bsc/data/snapshot -l - --auto-file-renaming=false --conditional-get=true \
+    aria2c -c -x6 -s6 -d /home/bsc/data/snapshot --auto-file-renaming=false --conditional-get=true \
       --allow-overwrite=true "${SNAPSHOT_FILE}"
     tar -I lz4 -xvf "/home/bsc/data/snapshot/${SNAPSHOT_FILE}" -C /home/bsc/data
     mv /home/bsc/data/server/data-seed/geth /home/bsc/data/
