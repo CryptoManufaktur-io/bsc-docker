@@ -5,6 +5,11 @@ wget $(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep 
 unzip -o mainnet.zip
 rm mainnet.zip
 
+# Remove unwanted settings in config.toml
+dasel delete -f config.toml Node.LogConfig
+dasel delete -f config.toml Node.HTTPHost
+dasel delete -f config.toml Node.HTTPVirtualHosts
+
 # Duplicate binance-supplied static nodes to trusted nodes
 for string in $(dasel -f config.toml -w json 'Node.P2P.StaticNodes' | jq -r .[]); do
   dasel put -v $(echo $string) -f config.toml 'Node.P2P.TrustedNodes.[]'
@@ -55,6 +60,7 @@ else
     aria2c -c -s14 -x14 -k100M -d /home/bsc/data/snapshot --auto-file-renaming=false --conditional-get=true \
       --allow-overwrite=true "${SNAPSHOT_FILE}"
     tar -I lz4 -xvf "/home/bsc/data/snapshot/$(basename "${SNAPSHOT_FILE}")" -C /home/bsc/data
+    rm -rf /home/bsc/data/geth
     mv /home/bsc/data/server/data-seed/geth /home/bsc/data/
     rm "/home/bsc/data/snapshot/$(basename "${SNAPSHOT_FILE}")"
     touch /home/bsc/data/setupdone
