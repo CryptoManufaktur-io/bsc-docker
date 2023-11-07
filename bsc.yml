@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   geth:
     restart: unless-stopped
@@ -10,8 +9,10 @@ services:
     user: "10000"
     stop_grace_period: 1m
     image: bsc-geth:local
+    pull_policy: build
     volumes:
       - geth-data:/home/bsc/data
+      - ${ANCIENT_DIR:-.nada}:/home/bsc/ancient
     ports:
       - 30311:30311/tcp
       - 30311:30311/udp
