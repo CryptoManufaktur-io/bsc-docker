@@ -789,8 +789,6 @@ __params=$*
 handle_root
 determine_distro
 
-if [ "$command" = "install" ]; then
-    $command "$@"
 if [ "$__command" = "install" ]; then
     $__command "$@"
     exit "$?"
