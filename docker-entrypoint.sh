@@ -51,7 +51,7 @@ __public_ip=$(curl -s ifconfig.me/ip)
 __ancient=""
 
 if [ -n "${ANCIENT_DIR}" ] && [ ! "${ANCIENT_DIR}" = ".nada" ]; then
-    __ancient="--datadir.ancient ${ANCIENT_DIR}"
+    __ancient="--datadir.ancient /home/bsc/ancient"
 fi
 
 if [ -f /home/bsc/data/prune-marker ]; then
@@ -68,8 +68,8 @@ elif [ -f /home/bsc/data/convert-marker ]; then
 else
   if [ -n "${SNAPSHOT}" ] && [ ! -f /home/bsc/data/setupdone ]; then
     if [ -n "${__ancient}" ]; then
-       __snap_dir=${ANCIENT_DIR}/snapshot
-       __data_dir=${ANCIENT_DIR}
+       __snap_dir=/home/bsc/ancient/snapshot
+       __data_dir=/home/bsc/ancient
     else
        __snap_dir=/home/bsc/data/snapshot
        __data_dir=/home/bsc/data
@@ -85,10 +85,10 @@ else
     if [ -n "${__ancient}" ]; then
         rm -rf /home/bsc/data/geth
         mkdir -p /home/bsc/data/geth/chaindata
-        find "${ANCIENT_DIR}/geth" -mindepth 1 -maxdepth 1 ! -name 'chaindata' -exec mv {} /home/bsc/data/geth/ \;
-        find "${ANCIENT_DIR}/geth/chaindata" -mindepth 1 -maxdepth 1 ! -name 'ancient' -exec mv {} /home/bsc/data/geth/chaindata/ \;
-        find "${ANCIENT_DIR}/geth/chaindata/ancient" -mindepth 1 -maxdepth 1 -exec mv {} "${ANCIENT_DIR}/" \;
-        rm -rf "${ANCIENT_DIR}/geth"
+        find "/home/bsc/ancient/geth" -mindepth 1 -maxdepth 1 ! -name 'chaindata' -exec mv {} /home/bsc/data/geth/ \;
+        find "/home/bsc/ancient/geth/chaindata" -mindepth 1 -maxdepth 1 ! -name 'ancient' -exec mv {} /home/bsc/data/geth/chaindata/ \;
+        find "/home/bsc/ancient/geth/chaindata/ancient" -mindepth 1 -maxdepth 1 -exec mv {} "/home/bsc/ancient/" \;
+        rm -rf "/home/bsc/ancient/geth"
     fi
     rm "${__snap_dir}/$(basename "${SNAPSHOT}")"
     touch /home/bsc/data/setupdone
