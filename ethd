@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-__project_name="bsc-docker"
+__project_name="BSC Docker"
 __app_name="BSC node"
 __sample_service="bsc"
 __docker_exe="docker"
