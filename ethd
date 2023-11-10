@@ -697,7 +697,7 @@ prune-geth() {
         echo
         echo "Do NOT abort this process. Aborting would leave you with a corrupted DB."
         echo
-        echo "There should be three stages: Hash to Path conversion, Hash Trie Pruning, and DB Compaction."
+        echo "There should be two stages: Hash to Path conversion, and DB Compaction."
         echo
         echo "When DB conversion is done, which should take 2-3 days, Geth will automatically start again."
     else
