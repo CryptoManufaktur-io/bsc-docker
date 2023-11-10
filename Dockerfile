@@ -26,9 +26,7 @@ RUN adduser \
     --uid "${UID}" \
     "${USER}"
 
-RUN mkdir -p /home/${USER}/.geth && mkdir -p /home/bsc/data && chown -R ${USER}:${USER} /home/${USER}
-
-# VOLUME /home/bsc/data
+RUN mkdir -p /home/${USER}/.geth && mkdir -p /home/${USER}/data && mkdir -p /home/${USER}/ancient && chown -R ${USER}:${USER} /home/${USER}
 
 # Copy executable
 COPY --from=builder /src/bsc/build/bin /usr/local/bin/
