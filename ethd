@@ -686,7 +686,7 @@ prune-geth() {
     fi
 
     echo ""
-    echo "Starting Geth prune"
+    echo "Starting Geth ${__prune}"
     echo ""
     docompose run --rm set-prune-marker "touch /home/bsc/data/${__prune}-marker"
     docompose stop geth && docompose rm -f geth
