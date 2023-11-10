@@ -62,11 +62,9 @@ if [ -f /home/bsc/data/prune-marker ]; then
 elif [ -f /home/bsc/data/convert-marker ]; then
   rm -f /home/bsc/data/convert-marker
   echo "Converting Geth DB to PBSS for continous prune. Do NOT abort this process."
-  geth --datadir /home/bsc/data ${__ancient} db hash2path 1000
-  echo "Initial DB conversion done, pruning hash trie"
-  geth --datadir /home/bsc/data ${__ancient} db prune-hash-trie
-  echo "Hash trie pruned, compacting DB"
-  exec geth --datadir /home/bsc/data ${__ancient} db compact
+  geth db hbss-to-pbss --datadir /home/bsc/data ${__ancient} 1000
+  echo "Conversion done, compacting DB"
+  exec geth db compact --datadir /home/bsc/data ${__ancient}
 else
   if [ -n "${SNAPSHOT}" ] && [ ! -f /home/bsc/data/setupdone ]; then
     if [ -n "${__ancient}" ]; then
