@@ -84,13 +84,14 @@ else
     # Move from server/data-seed into ${__data_dir}
     rm -rf ${__data_dir}/geth
     mv "${__data_dir}/server/data-seed/geth" "${__data_dir}"
-    if [ -n "${__ancient}"]; then
+    if [ -n "${__ancient}" ]; then
         rm -rf /home/bsc/data/geth
         mkdir -p /home/bsc/data/geth/chaindata
         find "${ANCIENT_DIR}/geth" -mindepth 1 -maxdepth 1 ! -name 'chaindata' -exec mv {} /home/bsc/data/geth/ \;
         find "${ANCIENT_DIR}/geth/chaindata" -mindepth 1 -maxdepth 1 ! -name 'ancient' -exec mv {} /home/bsc/data/geth/chaindata/ \;
         find "${ANCIENT_DIR}/geth/chaindata/ancient" -mindepth 1 -maxdepth 1 -exec mv {} "${ANCIENT_DIR}/" \;
-        rm -rf "${ANCIENT_DIR/geth"
+        rm -rf "${ANCIENT_DIR}/geth"
+    fi
     rm "${__snap_dir}/$(basename "${SNAPSHOT}")"
     touch /home/bsc/data/setupdone
   fi
