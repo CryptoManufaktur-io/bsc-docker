@@ -74,8 +74,7 @@ else
         __file_gib=$(( $__filesize / 1024 / 1024 / 1024 ))
         echo "SNAPSHOT is $__file_gib GiB and you have $__free_gib GiB free."
         echo "You need at least 2x the size of the snapshot plus a safety buffer of 10 GiB."
-        echo "Aborting"
-        exit 1
+        echo "Continuing anyway, but that may fail."
     fi
 
     mkdir -p "${__snap_dir}"
@@ -92,8 +91,8 @@ else
     else
         echo "Unexpected SNAPSHOT directory layout. It's unlikely to work until the entrypoint script is adjusted."
     fi
-    # If there is ancient/chain move it
-    if [ -d "${__data_dir}/geth/chaindata/ancient/chain" ]; then
+    # If there is ancient/chain but no ancient/state move it
+    if [ -d "${__data_dir}/geth/chaindata/ancient/chain" ] && [ ! -d "${__data_dir}/geth/chaindata/ancient/state" ]; then
         mv "${__data_dir}/geth/chaindata/ancient/chain/*" "${__data_dir}/geth/chaindata/ancient"
         rm -rf "${__data_dir}/geth/chaindata/ancient/chain"
     fi
