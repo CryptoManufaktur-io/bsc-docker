@@ -1,28 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-wget $(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep browser_ |grep mainnet |cut -d\" -f4)
-unzip -o mainnet.zip
-rm mainnet.zip
-
-# Remove unwanted settings in config.toml
-dasel delete -f config.toml Node.LogConfig
-dasel delete -f config.toml Node.HTTPHost
-dasel delete -f config.toml Node.HTTPVirtualHosts
-
-# Duplicate binance-supplied static nodes to trusted nodes
-for string in $(dasel -f config.toml -w json 'Node.P2P.StaticNodes' | jq -r .[]); do
-  dasel put -v $(echo $string) -f config.toml 'Node.P2P.TrustedNodes.[]'
-done
-
-# Set user-supplied static nodes, and also as trusted nodes
-if [ -n "${EXTRA_STATIC_NODES}" ]; then
-  for string in $(jq -r .[] <<< "${EXTRA_STATIC_NODES}"); do
-    dasel put -v $(echo $string) -f config.toml 'Node.P2P.StaticNodes.[]'
-    dasel put -v $(echo $string) -f config.toml 'Node.P2P.TrustedNodes.[]'
-  done
-fi
-
 # Set verbosity
 shopt -s nocasematch
 case ${LOG_LEVEL} in
@@ -56,6 +34,11 @@ fi
 
 if [ -f /home/bsc/data/prune-marker ]; then
   rm -f /home/bsc/data/prune-marker
+
+  wget $(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep browser_ |grep ${NETWORK} |cut -d\" -f4)
+  unzip -o ${NETWORK}.zip
+  rm ${NETWORK}.zip
+
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
   exec "$@" ${__ancient} snapshot prune-state
@@ -74,14 +57,47 @@ else
        __snap_dir=/home/bsc/data/snapshot
        __data_dir=/home/bsc/data
     fi
+    # Check for enough space
+
+    __free_space=$(df -P "${__data_dir}" | awk '/[0-9]%/{print $(NF-2)}')
+    if [ -z "$__free_space" ]; then
+        echo "Unable to determine free disk space. This is a bug."
+        echo "Aborting"
+        exit 1
+    fi
+    __filesize=$(curl -Is "${SNAPSHOT}" | grep -i Content-Length | awk '{print $2}')
+    __filesize=${__filesize%$'\r'}
+    if [ -z "$__filesize" ]; then
+        echo "Unable to determine SNAPSHOT size, downloading optimistically"
+    elif (( $__filesize * 2 + 1073741824 > $__free_space * 1024 )); then
+        __free_gib=$(( $__free_space / 1024 / 1024 ))
+        __file_gib=$(( $__filesize / 1024 / 1024 / 1024 ))
+        echo "SNAPSHOT is $__file_gib GiB and you have $__free_gib GiB free."
+        echo "You need at least 2x the size of the snapshot plus a safety buffer of 10 GiB."
+        echo "Aborting"
+        exit 1
+    fi
+
     mkdir -p "${__snap_dir}"
     aria2c -c -s14 -x14 -k100M -d ${__snap_dir} --auto-file-renaming=false --conditional-get=true \
       --allow-overwrite=true "${SNAPSHOT}"
     # Unpacks into server/data-seed/geth
     tar -I lz4 -xvf "${__snap_dir}/$(basename "${SNAPSHOT}")" -C ${__data_dir}
-    # Move from server/data-seed into ${__data_dir}
     rm -rf ${__data_dir}/geth
-    mv "${__data_dir}/server/data-seed/geth" "${__data_dir}"
+    # Move from server/data-seed into ${__data_dir}
+    if [ -d "${__data_dir}/server/data-seed/geth" ]; then
+        mv "${__data_dir}/server/data-seed/geth" "${__data_dir}"
+    elif [ -d "${__data_dir}/data-seed/geth" ]; then
+        mv "${__data_dir}/data-seed/geth" "${__data_dir}"
+    else
+        echo "Unexpected SNAPSHOT directory layout. It's unlikely to work until the entrypoint script is adjusted."
+    fi
+    # If there is ancient/chain move it
+    if [ -d "${__data_dir}/geth/chaindata/ancient/chain" ]; then
+        mv "${__data_dir}/geth/chaindata/ancient/chain/*" "${__data_dir}/geth/chaindata/ancient"
+        rm -rf "${__data_dir}/geth/chaindata/ancient/chain"
+    fi
+
     if [ -n "${__ancient}" ]; then
         rm -rf /home/bsc/data/geth
         mkdir -p /home/bsc/data/geth/chaindata
@@ -99,6 +115,28 @@ else
     echo "No SNAPSHOT provided in .env."
     echo "Initiating PBSS sync from genesis. This will take 2-3 months."
     geth --state.scheme path --datadir /home/bsc/data ${__ancient} init genesis.json
+  fi
+
+  wget $(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep browser_ |grep ${NETWORK} |cut -d\" -f4)
+  unzip -o ${NETWORK}.zip
+  rm ${NETWORK}.zip
+
+  # Remove unwanted settings in config.toml
+  dasel delete -f config.toml Node.LogConfig
+  dasel delete -f config.toml Node.HTTPHost
+  dasel delete -f config.toml Node.HTTPVirtualHosts
+
+  # Duplicate binance-supplied static nodes to trusted nodes
+  for string in $(dasel -f config.toml -w json 'Node.P2P.StaticNodes' | jq -r .[]); do
+    dasel put -v $(echo $string) -f config.toml 'Node.P2P.TrustedNodes.[]'
+  done
+
+  # Set user-supplied static nodes, and also as trusted nodes
+  if [ -n "${EXTRA_STATIC_NODES}" ]; then
+    for string in $(jq -r .[] <<< "${EXTRA_STATIC_NODES}"); do
+      dasel put -v $(echo $string) -f config.toml 'Node.P2P.StaticNodes.[]'
+      dasel put -v $(echo $string) -f config.toml 'Node.P2P.TrustedNodes.[]'
+    done
   fi
 
 # Word splitting is desired for the command line parameters
