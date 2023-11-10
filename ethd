@@ -671,8 +671,8 @@ prune-geth() {
           echo "You can convert the existing DB to PBSS, which will take 2-3 days and enable background pruning."
           read -rp "Do you wish to convert? (Yes/no) " yn
           case $yn in
-              [Nn]* ) __prune="prune"; break;;
-              * ) echo "Continuning with prune instead of DB conversion"; break;;
+              [Nn]* ) echo "Continuning with prune instead of DB conversion"; __prune="prune"; break;;
+              * ) echo "Continuning with DB conversion"; break;;
           esac
       done
 
