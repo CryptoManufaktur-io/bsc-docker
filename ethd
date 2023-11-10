@@ -10,12 +10,14 @@ __compose_upgraded=0
 
 
 dodocker() {
-    $__docker_exe "$@"
+    $__docker_sudo $__docker_exe "$@"
 }
 
 
 docompose() {
-    $__compose_exe "$@"
+# I want word splitting here
+# shellcheck disable=SC2086
+    $__docker_sudo $__compose_exe "$@"
 }
 
 
@@ -39,10 +41,22 @@ determine_distro() {
     [ "$__distro" == "" ] && __distro=$__uname
     unset __uname
     __distro=$(echo "$__distro" | tr "[:upper:]" "[:lower:]")
+
+    if [[ "$__distro" = "ubuntu" ]]; then
+      if ! dpkg-query -W -f='${Status}' lsb-release 2>/dev/null | grep -q "ok installed"; then
+        ${__auto_sudo} apt-get update && ${__auto_sudo} apt-get -y install lsb-release
+      fi
+      __os_major_version=$(lsb_release -r | cut -d: -f2 | sed s/'^\t'// | cut -d. -f1)
+    elif [[ "$__distro" =~ "debian" ]]; then
+      if ! dpkg-query -W -f='${Status}' lsb-release 2>/dev/null | grep -q "ok installed"; then
+        ${__auto_sudo} apt-get update && ${__auto_sudo} apt-get -y install lsb-release
+      fi
+      __os_major_version=$(lsb_release -r | cut -f2)
+    fi
 }
 
 
-determine_sudo() {
+handle_docker_sudo() {
     if [[ "$__distro" =~ "debian" || "$__distro" = "ubuntu" ]]; then
         systemctl status docker >/dev/null
         result=$?
@@ -54,28 +68,32 @@ determine_sudo() {
         fi
     fi
 
-    __maybe_sudo=""
+    __docker_sudo=""
     if ! docker images >/dev/null 2>&1; then
         echo "Will use sudo to access Docker"
-        __maybe_sudo="sudo"
+        __docker_sudo="sudo"
     fi
 }
 
 
-determine_docker() {
-    if [ -n "$__maybe_sudo" ]; then
-        __docker_exe="sudo $__docker_exe"
+handle_root() {
+    if [ "${EUID}" -eq 0 ]; then
+        __as_owner="sudo -u ${OWNER}"
+        __auto_sudo=""
+    else
+        __as_owner=""
+        __auto_sudo="sudo"
     fi
 }
 
 
-determine_compose() {
+check_compose_version() {
 # Check for Compose V2 (docker compose) vs Compose V1 (docker-compose)
   if docker compose version >/dev/null 2>&1; then
     __old_compose=0
   else
     __old_compose=1
-    __compose_version=$($__maybe_sudo docker-compose --version | sed -n -E -e "s/.*version [v]?([0-9.-]*).*/\1/ip")
+    __compose_version=$($__docker_sudo docker-compose --version | sed -n -E -e "s/.*version [v]?([0-9.-]*).*/\1/ip")
     if [ -n "${ETHDSECUNDO-}" ]  || [ ! "${__command}" = "update" ]; then # Don't run this twice
       echo
       echo "You are using docker-compose ${__compose_version}, which is unsupported by Docker, Inc."
@@ -91,10 +109,6 @@ determine_compose() {
       done
     fi
   fi
-
-  if [ -n "$__maybe_sudo" ]; then
-    __compose_exe="sudo $__compose_exe"
-  fi
 }
 
 
@@ -105,10 +119,8 @@ upgrade_compose() {
   fi
   echo "Updating Docker Compose to V2"
   if [[ "$__distro" = "ubuntu" ]]; then
-    ${__auto_sudo} apt-get update && ${__auto_sudo} apt-get install -y lsb-release
-    __major_version=$(lsb_release -r | cut -d: -f2 | sed s/'^\t'// | cut -d. -f1)
-    if [ "${__major_version}" -lt 20 ]; then
-      echo "${__project_name} cannot update Docker Compose on Ubuntu ${__major_version}."
+    if [ "${__os_major_version}" -lt 20 ]; then
+      echo "${__project_name} cannot update Docker Compose on Ubuntu ${__os_major_version}."
       echo "Consider upgrading to 20.04 and then 22.04."
       exit 1
     fi
@@ -125,10 +137,9 @@ upgrade_compose() {
     __old_compose=0
     __compose_upgraded=1
   elif [[ "$__distro" =~ "debian" ]]; then
-    ${__auto_sudo} apt-get update && ${__auto_sudo} apt-get -y install ca-certificates curl gnupg lsb-release
-    __major_version=$(lsb_release -r | cut -f2)
-    if [ "${__major_version}" -lt 10 ]; then
-        echo "${__project_name} cannot update Docker Compose on Debian ${__major_version}."
+    ${__auto_sudo} apt-get update && ${__auto_sudo} apt-get -y install ca-certificates curl gnupg
+    if [ "${__os_major_version}" -lt 10 ]; then
+        echo "${__project_name} cannot update Docker Compose on Debian ${__os_major_version}."
         echo "Consider upgrading to 10, then 11 and then 12."
         exit 1
     fi
@@ -152,17 +163,6 @@ upgrade_compose() {
   else
     echo "${__project_name} does not know how to update Docker Compose on $__distro"
   fi
-}
-
-
-handle_root() {
-    if [ "${EUID}" -eq 0 ]; then
-        __as_owner="sudo -u ${OWNER}"
-        __auto_sudo=""
-    else
-        __as_owner=""
-        __auto_sudo="sudo"
-    fi
 }
 
 
@@ -196,14 +196,13 @@ install() {
         esac
     done
     if [[ "$__distro" = "ubuntu" ]]; then
-        __major_version=$(lsb_release -r | cut -d: -f2 | sed s/'^\t'// | cut -d. -f1)
-        if [ "${__major_version}" -lt 20 ]; then
-            echo "${__project_name} cannot install Docker on Ubuntu ${__major_version}."
+        if [ "${__os_major_version}" -lt 20 ]; then
+            echo "${__project_name} cannot install Docker on Ubuntu ${__os_major_version}."
             echo "Consider upgrading to 20.04 and then 22.04."
             exit 1
         fi
         if [ -z "$(which docker)" ]; then
-            ${__auto_sudo} apt-get update && ${__auto_sudo} apt-get install -y ca-certificates curl gnupg lsb-release \
+            ${__auto_sudo} apt-get update && ${__auto_sudo} apt-get install -y ca-certificates curl gnupg \
                 chrony pkg-config
             ${__auto_sudo} mkdir -p /etc/apt/keyrings
             ${__auto_sudo} curl -fsSL https://download.docker.com/linux/ubuntu/gpg | ${__auto_sudo} gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -228,10 +227,9 @@ install() {
     elif [[ "$__distro" =~ "debian" ]]; then
         if [ -z "$(which docker)" ]; then
             ${__auto_sudo} apt-get update
-            ${__auto_sudo} apt-get -y install ca-certificates curl gnupg lsb-release chrony pkg-config
-            __major_version=$(lsb_release -r | cut -f2)
-            if [ "${__major_version}" -lt 10 ]; then
-                echo "${__project_name} cannot install Docker on Debian ${__major_version}."
+            ${__auto_sudo} apt-get -y install ca-certificates curl gnupg chrony pkg-config
+            if [ "${__os_major_version}" -lt 10 ]; then
+                echo "${__project_name} cannot install Docker on Debian ${__os_major_version}."
                 echo "Consider upgrading to 10, then 11 and then 12."
                 exit 1
             fi
@@ -283,7 +281,7 @@ check_disk_space() {
     if [[ "${value}" =~ "bsc.yml" ]] && [[ "${__free_space}" -lt 104857600 ]]; then
         echo
         echo "You are running BSC Geth and have less than 100 GiB of free disk space."
-        echo "If Avail reads 40 GiB or more, prune with ./${__me} prune-geth:"
+        echo "If Avail reads 40 GiB or more, convert to PBSS with ${__me} prune-geth:"
         echo
         df -h "${__docker_dir}"
         echo
@@ -306,19 +304,17 @@ check_disk_space() {
 
 nag_os_version() {
     if [[ "$__distro" = "ubuntu" ]]; then
-      __major_version=$(lsb_release -r | cut -d: -f2 | sed s/'^\t'// | cut -d. -f1)
-      if [ "${__major_version}" -lt 20 ]; then
+      if [ "${__os_major_version}" -lt 20 ]; then
          echo
-         echo "Ubuntu ${__major_version} is older than the recommended 22.04 or 20.04 version."
+         echo "Ubuntu ${__os_major_version} is older than the recommended 22.04 or 20.04 version."
          echo
       fi
     fi
 
     if [[ "$__distro" =~ "debian" ]]; then
-      __major_version=$(lsb_release -r | cut -f2)
-      if [ "${__major_version}" -lt 10 ]; then
+      if [ "${__os_major_version}" -lt 10 ]; then
          echo
-         echo "Debian ${__major_version} is older than the recommended 10, 11 or 12 version."
+         echo "Debian ${__os_major_version} is older than the recommended 10, 11 or 12 version."
          echo
       fi
     fi
@@ -396,7 +392,7 @@ find the original contents in ${ENV_FILE}.bak."
     fi
 
     echo
-    echo "An $__me up command will start using the new images and configuration."
+    echo "A $__me up command will start using the new images and configuration."
     nag_os_version
 
     unset ETHDSECUNDO
@@ -422,9 +418,9 @@ envmigrate() {
     ALL_VARS=( COMPOSE_FILE ANCIENT_DIR GETH_BUILD_TARGET LOG_LEVEL EXTRA_STATIC_NODES MAX_PEERS \
             DOMAIN ACME_EMAIL CF_DNS_API_TOKEN CFS_ZONE_API_TOKEN CF_ZONE_ID AWS_PROFILE AWS_HOSTED_ZONE_ID \
             RPC_HOST RPC_LB WS_HOST WS_LB DDNS_SUBDOMAIN DDNS_PROXY RPC_PORT WS_PORT \
-            TRAEFIK_WEB_HTTP_PORT TRAEFIK_WEB_PORT COMPOSEV1_NAG SNAPSHOT_FILE )
-    OLD_VARS=( CF_API_TOKEN )
-    NEW_VARS=( CF_DNS_API_TOKEN )
+            TRAEFIK_WEB_HTTP_PORT TRAEFIK_WEB_PORT SNAPSHOT )
+    OLD_VARS=( CF_API_TOKEN SNAPSHOT_FILE )
+    NEW_VARS=( CF_DNS_API_TOKEN SNAPSHOT )
 
     var=ENV_VERSION
     __target_ver=$(sed -n -e "s/^${var}=\(.*\)/\1/p" "default.env" || true)
@@ -443,7 +439,7 @@ envmigrate() {
     for var in "${ALL_VARS[@]}"; do
         value=$(sed -n -e "s/^${var}=\(.*\)/\1/p" "${ENV_FILE}.source" || true)
 # Adjust for vars that are possibly empty
-        if [ -n "${value}" ] || [ "${var}" = "EXTRA_STATIC_NODES" ]; then
+        if [ -n "${value}" ] || [ "${var}" = "EXTRA_STATIC_NODES" ] || [ "${var}" = "SNAPSHOT" ]; then
             sed -i'.original' -e "s~^\(${var}\s*=\s*\).*$~\1${value}~" "${ENV_FILE}"
         fi
     done
@@ -574,10 +570,11 @@ handle_error() {
 version() {
     # ethd version
     grep "^This is" README.md
-    echo ""
+    echo
     var="COMPOSE_FILE"
     value=$(sed -n -e "s/^${var}=\(.*\)/\1/p" ".env" || true)
     # Client versions
+# Adjust for your clients and how to check their version
     case "${value}" in
         *bsc.yml* )
             docompose exec geth geth version
@@ -618,7 +615,7 @@ prune-geth() {
 
     __docker_dir=$(docker system info --format '{{.DockerRootDir}}')
 
-    if [ "$(df -P ${__docker_dir} | awk '/[0-9]%/{print $(NF-2)}')" -lt 41943040 ]; then
+    if [ "$(df -P "${__docker_dir}" | awk '/[0-9]%/{print $(NF-2)}')" -lt 41943040 ]; then
         echo "You do not have enough free disk space. Make sure this reads at least 40G free (Avail):"
         df -h "${__docker_dir}"
         echo ""
@@ -668,12 +665,22 @@ prune-geth() {
         fi
     fi
 
+    __prune="convert"
     if [ $__non_interactive = 0 ]; then
       while true; do
-          read -rp "WARNING - this will stop Geth and prune its database. Do you wish to continue? (No/Yes) " yn
+          echo "You can convert the existing DB to PBSS, which will take 2-3 days and enable background pruning."
+          read -rp "Do you wish to convert? (Yes/no) " yn
+          case $yn in
+              [Nn]* ) __prune="prune"; break;;
+              * ) echo "Continuning with prune instead of DB conversion"; break;;
+          esac
+      done
+
+      while true; do
+          read -rp "WARNING - this will stop Geth and ${__prune} its database. Do you wish to continue? (No/Yes) " yn
           case $yn in
               [Yy][Ee][Ss] ) break;;
-              * ) echo "Aborting, no changes made"; exit 1;;
+              * ) echo "Aborting, no changes made"; exit 130;;
           esac
       done
     fi
@@ -681,17 +688,27 @@ prune-geth() {
     echo ""
     echo "Starting Geth prune"
     echo ""
-    docompose run --rm set-prune-marker "touch /home/bsc/data/prune-marker"
+    docompose run --rm set-prune-marker "touch /home/bsc/data/${__prune}-marker"
     docompose stop geth && docompose rm -f geth
     start
-    echo ""
-    echo "Prune is running, you can observe it with './ethd logs -f geth'"
-    echo ""
-    echo "There should be three stages: \"Iterating state snapshot\", \"Pruning state data\", and \"Compacting database\". During \
-the \"Compacting database\" stage it may not output logs for an hour or so, that is normal."
-    echo ""
-    echo "When prune is done, which takes 4-5 hours, Geth will automatically start again."
-    echo ""
+    echo
+    if [ "${__prune}" = "convert" ]; then
+        echo "DB conversion is running, you can observe it with \"${__me} logs -f geth\""
+        echo
+        echo "Do NOT abort this process. Aborting would leave you with a corrupted DB."
+        echo
+        echo "There should be three stages: Hash to Path conversion, Hash Trie Pruning, and DB Compaction."
+        echo
+        echo "When DB conversion is done, which should take 2-3 days, Geth will automatically start again."
+    else
+        echo "Prune is running, you can observe it with \"${__me} logs -f geth\""
+        echo
+        echo "There should be three stages: \"Iterating state snapshot\", \"Pruning state data\", and \"Compacting database\". During \
+    the \"Compacting database\" stage it may not output logs for an hour or so, that is normal."
+        echo
+        echo "When prune is done, which takes 4-5 hours, Geth will automatically start again."
+    fi
+    echo
 }
 
 
@@ -718,6 +735,8 @@ help() {
     echo "     executes an arbitrary Docker Compose command. Use \"cmd help\" to list them"
     echo "  terminate"
     echo "     stops the ${__app_name} and destroys all data stores"
+    echo "  prune-geth"
+    echo "     stops the ${__app_name} and converts the DB to PBSS or prunes it"
     echo "  help"
     echo "      print this help screen"
     echo
@@ -767,19 +786,16 @@ __command="$1"
 shift
 __params=$*
 
-determine_distro
 handle_root
+determine_distro
 
-if [ "$command" = "install" ]; then
-    $command "$@"
 if [ "$__command" = "install" ]; then
     $__command "$@"
     exit "$?"
 fi
 
-determine_sudo
-determine_docker
-determine_compose
+handle_docker_sudo
+check_compose_version
 
 if [ "${__old_compose}" -eq 1 ]; then
   echo

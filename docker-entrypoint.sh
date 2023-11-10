@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 wget $(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep browser_ |grep mainnet |cut -d\" -f4)
 unzip -o mainnet.zip
@@ -48,30 +48,61 @@ case ${LOG_LEVEL} in
 esac
 
 __public_ip=$(curl -s ifconfig.me/ip)
+__ancient=""
+
+if [ -n "${ANCIENT_DIR}" ] && [ ! "${ANCIENT_DIR}" = ".nada" ]; then
+    __ancient="--datadir.ancient ${ANCIENT_DIR}"
+fi
 
 if [ -f /home/bsc/data/prune-marker ]; then
   rm -f /home/bsc/data/prune-marker
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-  exec "$@" snapshot prune-state
+  exec "$@" ${__ancient} snapshot prune-state
+elif [ -f /home/bsc/data/convert-marker ]; then
+  rm -f /home/bsc/data/convert-marker
+  echo "Converting Geth DB to PBSS for continous prune. Do NOT abort this process."
+  geth --datadir /home/bsc/data ${__ancient} db hash2path 1000
+  echo "Initial DB conversion done, pruning hash trie"
+  geth --datadir /home/bsc/data ${__ancient} db prune-hash-trie
+  echo "Hash trie pruned, compacting DB"
+  exec geth --datadir /home/bsc/data ${__ancient} db compact
 else
-  if [ -n "${SNAPSHOT_FILE}" ] && [ ! -f /home/bsc/data/setupdone ]; then
-    mkdir -p /home/bsc/data/snapshot
-    aria2c -c -s14 -x14 -k100M -d /home/bsc/data/snapshot --auto-file-renaming=false --conditional-get=true \
-      --allow-overwrite=true "${SNAPSHOT_FILE}"
-    tar -I lz4 -xvf "/home/bsc/data/snapshot/$(basename "${SNAPSHOT_FILE}")" -C /home/bsc/data
-    rm -rf /home/bsc/data/geth
-    mv /home/bsc/data/server/data-seed/geth /home/bsc/data/
-    rm "/home/bsc/data/snapshot/$(basename "${SNAPSHOT_FILE}")"
+  if [ -n "${SNAPSHOT}" ] && [ ! -f /home/bsc/data/setupdone ]; then
+    if [ -n "${__ancient}" ]; then
+       __snap_dir=${ANCIENT_DIR}/snapshot
+       __data_dir=${ANCIENT_DIR}
+    else
+       __snap_dir=/home/bsc/data/snapshot
+       __data_dir=/home/bsc/data
+    fi
+    mkdir -p "${__snap_dir}"
+    aria2c -c -s14 -x14 -k100M -d ${__snap_dir} --auto-file-renaming=false --conditional-get=true \
+      --allow-overwrite=true "${SNAPSHOT}"
+    # Unpacks into server/data-seed/geth
+    tar -I lz4 -xvf "${__snap_dir}/$(basename "${SNAPSHOT}")" -C ${__data_dir}
+    # Move from server/data-seed into ${__data_dir}
+    rm -rf ${__data_dir}/geth
+    mv "${__data_dir}/server/data-seed/geth" "${__data_dir}"
+    if [ -n "${__ancient}"]; then
+        rm -rf /home/bsc/data/geth
+        mkdir -p /home/bsc/data/geth/chaindata
+        find "${ANCIENT_DIR}/geth" -mindepth 1 -maxdepth 1 ! -name 'chaindata' -exec mv {} /home/bsc/data/geth/ \;
+        find "${ANCIENT_DIR}/geth/chaindata" -mindepth 1 -maxdepth 1 ! -name 'ancient' -exec mv {} /home/bsc/data/geth/chaindata/ \;
+        find "${ANCIENT_DIR}/geth/chaindata/ancient" -mindepth 1 -maxdepth 1 -exec mv {} "${ANCIENT_DIR}/" \;
+        rm -rf "${ANCIENT_DIR/geth"
+    rm "${__snap_dir}/$(basename "${SNAPSHOT}")"
     touch /home/bsc/data/setupdone
   fi
 
   # Sync from genesis if no snapshot was downloaded, above
   if [ ! -d /home/bsc/data/geth ]; then
-    geth --datadir /home/bsc/data init genesis.json
+    echo "No SNAPSHOT provided in .env."
+    echo "Initiating PBSS sync from genesis. This will take 2-3 months."
+    geth --state.scheme path --datadir /home/bsc/data ${__ancient} init genesis.json
   fi
 
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-  exec "$@" --nat extip:${__public_ip} ${__verbosity}
+  exec "$@" ${__ancient} --nat extip:${__public_ip} ${__verbosity}
 fi
