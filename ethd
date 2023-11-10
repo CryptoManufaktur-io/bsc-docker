@@ -665,16 +665,21 @@ prune-geth() {
         fi
     fi
 
-    __prune="convert"
+    __prune="prune"
+    __memtotal=$(awk '/MemTotal/ {printf "%d", int($2/1024/1024)}' /proc/meminfo)
     if [ $__non_interactive = 0 ]; then
-      while true; do
-          echo "You can convert the existing DB to PBSS, which will take 2-3 days and enable background pruning."
-          read -rp "Do you wish to convert? (Yes/no) " yn
-          case $yn in
-              [Nn]* ) echo "Continuing with prune instead of DB conversion"; __prune="prune"; break;;
-              * ) echo "Continuing with DB conversion"; break;;
-          esac
-      done
+      if [ "${__memtotal}" -lt 60 ]; then
+        echo "Not enough memory to do PBSS conversion, you have only ${__memtotal} GiB of RAM."
+      else
+        while true; do
+            echo "You can convert the existing DB to PBSS, which will take 2-3 days and enable background pruning."
+            read -rp "Do you wish to convert? (Yes/no) " yn
+            case $yn in
+                [Nn]* ) echo "Continuing with prune instead of DB conversion"; break;;
+                * ) echo "Continuing with DB conversion"; __prune="convert"; break;;
+            esac
+        done
+      fi
 
       while true; do
           read -rp "WARNING - this will stop Geth and ${__prune} its database. Do you wish to continue? (No/Yes) " yn
@@ -701,6 +706,10 @@ prune-geth() {
         echo "During the \"Compacting database\" stage it may not output logs for an hour or so, that is normal."
         echo
         echo "When DB conversion is done, which should take 2-3 days, Geth will automatically start again."
+        if [ "${__memtotal}" -lt 120 ]; then
+            echo
+            echo "Consider adding swap space. Conversion is memory hungry and you have only ${__memtotal} GiB of RAM".
+        fi
     else
         echo "Prune is running, you can observe it with \"${__me} logs -f geth\""
         echo
