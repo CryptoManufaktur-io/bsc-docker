@@ -95,7 +95,7 @@ else
     fi
     # If there is ancient/chain but no ancient/state move it
     if [ -d "${__data_dir}/geth/chaindata/ancient/chain" ] && [ ! -d "${__data_dir}/geth/chaindata/ancient/state" ]; then
-        find "${__data_dir}/geth/chaindata/ancient/chain" -mindepth 1 -maxdepth 1 -exec mv {} "${__data_dir}/geth/chaindata//ancient/" \;
+        find "${__data_dir}/geth/chaindata/ancient/chain" -mindepth 1 -maxdepth 1 -exec mv {} "${__data_dir}/geth/chaindata/ancient/" \;
         rm -rf "${__data_dir}/geth/chaindata/ancient/chain"
     fi
 
