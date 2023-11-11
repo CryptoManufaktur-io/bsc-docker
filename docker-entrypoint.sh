@@ -93,11 +93,6 @@ else
     else
         echo "Unexpected SNAPSHOT directory layout. It's unlikely to work until the entrypoint script is adjusted."
     fi
-    # If there is ancient/chain but no ancient/state move it
-    if [ -d "${__data_dir}/geth/chaindata/ancient/chain" ] && [ ! -d "${__data_dir}/geth/chaindata/ancient/state" ]; then
-        find "${__data_dir}/geth/chaindata/ancient/chain" -mindepth 1 -maxdepth 1 -exec mv {} "${__data_dir}/geth/chaindata/ancient/" \;
-        rm -rf "${__data_dir}/geth/chaindata/ancient/chain"
-    fi
 
     if [ -n "${__ancient}" ]; then
         rm -rf /home/bsc/data/geth
