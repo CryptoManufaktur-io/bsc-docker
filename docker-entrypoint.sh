@@ -112,12 +112,14 @@ else
   fi
 
   # Sync from genesis if no snapshot was downloaded, above
-  if [ ! -d /home/bsc/data/geth ]; then
+  if [ ! -d /home/bsc/data/geth/chaindata ]; then
     echo "No SNAPSHOT provided in .env."
     echo "Initiating PBSS sync from genesis. This will take 2-3 months."
     geth --state.scheme path --datadir /home/bsc/data ${__ancient} init genesis.json
   fi
 
+  # The wget was moved down here so that repeated failures with SNAPSHOT above don't exhaust
+  # the github API rate limit
   wget $(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep browser_ |grep ${NETWORK} |cut -d\" -f4)
   unzip -o ${NETWORK}.zip
   rm ${NETWORK}.zip
