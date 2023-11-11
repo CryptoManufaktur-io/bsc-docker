@@ -10,4 +10,4 @@ you want a specific version of bsc-geth, then `./bscd up`.
 To update geth, adjust `GETH_BUILD_TARGET` if it targets a specific version, and run `./bscd update`
 and `./bscd up`
 
-This is BSC Docker v1.3.0
+This is BSC Docker v1.3.1

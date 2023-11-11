@@ -86,14 +86,16 @@ else
     # Move from server/data-seed into ${__data_dir}
     if [ -d "${__data_dir}/server/data-seed/geth" ]; then
         mv "${__data_dir}/server/data-seed/geth" "${__data_dir}"
+        rm -rf "${__data_dir}/server/data-seed"
     elif [ -d "${__data_dir}/data-seed/geth" ]; then
         mv "${__data_dir}/data-seed/geth" "${__data_dir}"
+        rm -rf "${__data_dir}/data-seed"
     else
         echo "Unexpected SNAPSHOT directory layout. It's unlikely to work until the entrypoint script is adjusted."
     fi
     # If there is ancient/chain but no ancient/state move it
     if [ -d "${__data_dir}/geth/chaindata/ancient/chain" ] && [ ! -d "${__data_dir}/geth/chaindata/ancient/state" ]; then
-        mv "${__data_dir}/geth/chaindata/ancient/chain/*" "${__data_dir}/geth/chaindata/ancient"
+        find "${__data_dir}/geth/chaindata/ancient/chain" -mindepth 1 -maxdepth 1 -exec mv {} "${__data_dir}/geth/chaindata//ancient/" \;
         rm -rf "${__data_dir}/geth/chaindata/ancient/chain"
     fi
 
@@ -105,7 +107,7 @@ else
         find "/home/bsc/ancient/geth/chaindata/ancient" -mindepth 1 -maxdepth 1 -exec mv {} "/home/bsc/ancient/" \;
         rm -rf "/home/bsc/ancient/geth"
     fi
-    rm "${__snap_dir}/$(basename "${SNAPSHOT}")"
+    rm -rf "${__snap_dir}"
     touch /home/bsc/data/setupdone
   fi
 
