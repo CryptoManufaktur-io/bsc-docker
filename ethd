@@ -711,8 +711,8 @@ prune-geth() {
         echo
         echo "Do NOT abort this process. Aborting would leave you with a corrupted DB."
         echo
-        echo "There should be three stages: \"Converting\", \"Pruning hash-base state trie nodes\", and \"Compacting database\"."
-        echo "During the \"Compacting database\" stage it may not output logs for an hour or so, that is normal."
+        echo "There should be three stages: \"Converting\", \"Pruning hash-base state trie nodes\", and \"Compaction\"."
+        echo "There will be a start and end log during database compaction, but no progress logs."
         echo
         echo "When DB conversion is done, which should take 2-3 days, Geth will automatically start again."
         if (( $__memtotal + $__swaptotal < 120 )); then
