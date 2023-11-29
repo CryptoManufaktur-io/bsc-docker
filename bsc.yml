@@ -50,7 +50,7 @@ services:
       - ${WS_PORT:-8546}
       - --ws.api
       - web3,eth,net
-      - --txlookuplimit
+      - --history.transactions
       - "0"
       - --maxpeers
       - ${MAX_PEERS}
