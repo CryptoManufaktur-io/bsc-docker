@@ -15,4 +15,4 @@ and `./bscd up`
 BSC Docker uses semver versioning. First digit breaking changes, second digit non-breaking changes and additions,
 third digit bugfixes.
 
-This is BSC Docker v2.0.0
+This is BSC Docker v2.1.0

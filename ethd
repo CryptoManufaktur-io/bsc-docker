@@ -281,7 +281,7 @@ check_disk_space() {
     if [[ "${value}" =~ "bsc.yml" ]] && [[ "${__free_space}" -lt 104857600 ]]; then
         echo
         echo "You are running BSC Geth and have less than 100 GiB of free disk space."
-        echo "If Avail reads 40 GiB or more, convert to PBSS with ${__me} prune-geth:"
+        echo "If Avail reads 40 GiB or more, prune ancient data with ${__me} prune-geth:"
         echo
         df -h "${__docker_dir}"
         echo
@@ -673,25 +673,11 @@ prune-geth() {
         fi
     fi
 
-    __prune="prune"
     __memtotal=$(awk '/MemTotal/ {printf "%d", int($2/1024/1024)}' /proc/meminfo)
     __swaptotal=$(awk '/SwapTotal/ {printf "%d", int($2/1024/1024)}' /proc/meminfo)
     if [ $__non_interactive = 0 ]; then
-      if [ "${__memtotal}" -lt 60 ]; then
-        echo "Not enough memory to do PBSS conversion, you have only ${__memtotal} GiB of RAM."
-      else
-        while true; do
-            echo "You can convert the existing DB to PBSS, which will take 2-3 days and enable background pruning."
-            read -rp "Do you wish to convert? (Yes/no) " yn
-            case $yn in
-                [Nn]* ) echo "Continuing with prune instead of DB conversion"; break;;
-                * ) echo "Continuing with DB conversion"; __prune="convert"; break;;
-            esac
-        done
-      fi
-
       while true; do
-          read -rp "WARNING - this will stop Geth and ${__prune} its database. Do you wish to continue? (No/Yes) " yn
+          read -rp "WARNING - this will stop Geth and prune its ancient database. Do you wish to continue? (No/Yes) " yn
           case $yn in
               [Yy][Ee][Ss] ) break;;
               * ) echo "Aborting, no changes made"; exit 130;;
@@ -700,34 +686,15 @@ prune-geth() {
     fi
 
     echo ""
-    echo "Starting Geth ${__prune}"
+    echo "Starting Geth ancient block prune"
     echo ""
-    docompose run --rm set-prune-marker "touch /home/bsc/data/${__prune}-marker"
+    docompose run --rm set-prune-marker "touch /home/bsc/data/prune-marker"
     docompose stop geth && docompose rm -f geth
     start
     echo
-    if [ "${__prune}" = "convert" ]; then
-        echo "DB conversion is running, you can observe it with \"${__me} logs -f geth\""
-        echo
-        echo "Do NOT abort this process. Aborting would leave you with a corrupted DB."
-        echo
-        echo "There should be three stages: \"Converting\", \"Pruning hash-base state trie nodes\", and \"Compaction\"."
-        echo "There will be a start and end log during database compaction, but no progress logs."
-        echo
-        echo "When DB conversion is done, which should take 2-3 days, Geth will automatically start again."
-        if (( $__memtotal + $__swaptotal < 120 )); then
-            echo
-            echo "Consider adding swap space. Conversion is memory hungry and you have only ${__memtotal} GiB of RAM"
-            echo "and ${__swaptotal} GiB of swap space."
-        fi
-    else
-        echo "Prune is running, you can observe it with \"${__me} logs -f geth\""
-        echo
-        echo "There should be three stages: \"Iterating state snapshot\", \"Pruning state data\", and \"Compacting database\"."
-        echo "During the \"Compacting database\" stage it may not output logs for an hour or so, that is normal."
-        echo
-        echo "When prune is done, which takes 4-5 hours, Geth will automatically start again."
-    fi
+      echo "Prune is running, you can observe it with \"${__me} logs -f geth\""
+      echo
+      echo "When prune is done, which takes 4-5 hours, Geth will automatically start again."
     echo
 }
 
@@ -756,7 +723,7 @@ help() {
     echo "  terminate"
     echo "     stops the ${__app_name} and destroys all data stores"
     echo "  prune-geth"
-    echo "     stops the ${__app_name} and converts the DB to PBSS or prunes it"
+    echo "     stops the ${__app_name} and prunes the ancient DB"
     echo "  help"
     echo "      print this help screen"
     echo
