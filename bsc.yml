@@ -22,6 +22,7 @@ services:
       - EXTRA_STATIC_NODES=${EXTRA_STATIC_NODES:-}
       - ANCIENT_DIR=${ANCIENT_DIR}
       - NETWORK=${NETWORK}
+      - GETH_EXTRAS=${GETH_EXTRAS:-}
     entrypoint:
       - docker-entrypoint.sh
       - geth
