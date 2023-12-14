@@ -35,19 +35,13 @@ fi
 if [ -f /home/bsc/data/prune-marker ]; then
   rm -f /home/bsc/data/prune-marker
 
-  wget $(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep browser_ |grep ${NETWORK} |cut -d\" -f4)
-  unzip -o ${NETWORK}.zip
-  rm ${NETWORK}.zip
+  wget "$(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep browser_ |grep "${NETWORK}" |cut -d\" -f4)"
+  unzip -o "${NETWORK}".zip
+  rm "${NETWORK}".zip
 
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-  exec "$@" ${__ancient} snapshot prune-state
-elif [ -f /home/bsc/data/convert-marker ]; then
-  rm -f /home/bsc/data/convert-marker
-  echo "Converting Geth DB to PBSS for continous prune. Do NOT abort this process."
-  geth db hbss-to-pbss --datadir /home/bsc/data ${__ancient} 1000
-  echo "Conversion done, compacting DB"
-  exec geth db compact --datadir /home/bsc/data ${__ancient}
+  exec "$@" ${__ancient} snapshot prune-block --block-amount-reserved 1024
 else
   if [ -n "${SNAPSHOT}" ] && [ ! -f /home/bsc/data/setupdone ]; then
     if [ -n "${__ancient}" ]; then
@@ -69,9 +63,9 @@ else
     __filesize=${__filesize%$'\r'}
     if [ -z "$__filesize" ]; then
         echo "Unable to determine SNAPSHOT size, downloading optimistically"
-    elif (( $__filesize * 2 + 1073741824 > $__free_space * 1024 )); then
-        __free_gib=$(( $__free_space / 1024 / 1024 ))
-        __file_gib=$(( $__filesize / 1024 / 1024 / 1024 ))
+    elif (( __filesize * 2 + 1073741824 > __free_space * 1024 )); then
+        __free_gib=$(( __free_space / 1024 / 1024 ))
+        __file_gib=$(( __filesize / 1024 / 1024 / 1024 ))
         echo "SNAPSHOT is $__file_gib GiB and you have $__free_gib GiB free."
         echo "You need at least 2x the size of the snapshot plus a safety buffer of 10 GiB."
         echo "Continuing anyway, but that may fail."
@@ -108,9 +102,9 @@ else
 
   # The wget was moved down here so that repeated failures with SNAPSHOT above don't exhaust
   # the github API rate limit
-  wget $(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep browser_ |grep ${NETWORK} |cut -d\" -f4)
-  unzip -o ${NETWORK}.zip
-  rm ${NETWORK}.zip
+  wget "$(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep browser_ |grep "${NETWORK}" |cut -d\" -f4)"
+  unzip -o "${NETWORK}".zip
+  rm "${NETWORK}".zip
 
   # Remove unwanted settings in config.toml
   dasel delete -f config.toml Node.LogConfig
@@ -119,13 +113,18 @@ else
 
   # Duplicate binance-supplied static nodes to trusted nodes
   for string in $(dasel -f config.toml -w json 'Node.P2P.StaticNodes' | jq -r .[]); do
+# Word splitting is desired
+# shellcheck disable=SC2086,SC2046,SC2116
     dasel put -v $(echo $string) -f config.toml 'Node.P2P.TrustedNodes.[]'
   done
 
   # Set user-supplied static nodes, and also as trusted nodes
   if [ -n "${EXTRA_STATIC_NODES}" ]; then
     for string in $(jq -r .[] <<< "${EXTRA_STATIC_NODES}"); do
+# Word splitting is desired
+# shellcheck disable=SC2086,SC2046,SC2116
       dasel put -v $(echo $string) -f config.toml 'Node.P2P.StaticNodes.[]'
+# shellcheck disable=SC2086,SC2046,SC2116
       dasel put -v $(echo $string) -f config.toml 'Node.P2P.TrustedNodes.[]'
     done
   fi
@@ -134,6 +133,8 @@ else
   if [ ! -d /home/bsc/data/geth/chaindata ]; then
     echo "No SNAPSHOT provided in .env."
     echo "Initiating PBSS sync from genesis. This will take 2-3 months."
+# Word splitting is desired for the command line parameters
+# shellcheck disable=SC2086
     geth --state.scheme path --datadir /home/bsc/data ${__ancient} init genesis.json
   fi
 
