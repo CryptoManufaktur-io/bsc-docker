@@ -74,13 +74,21 @@ else
     mkdir -p "${__snap_dir}"
     aria2c -c -s14 -x14 -k100M -d ${__snap_dir} --auto-file-renaming=false --conditional-get=true \
       --allow-overwrite=true "${SNAPSHOT}"
-    # Unpacks into server/data-seed/geth
     tar -I lz4 -xvf "${__snap_dir}/$(basename "${SNAPSHOT}")" -C ${__data_dir}
     rm -rf ${__data_dir}/geth
-    # Move from server/data-seed into ${__data_dir}
-    if [ -d "${__data_dir}/server/data-seed/geth" ]; then
+    # Move from server/node into ${__data_dir} - mainnet Pebble+PBSS
+    if [ -d "${__data_dir}/server/node/geth" ]; then
+        mv "${__data_dir}/server/node/geth" "${__data_dir}"
+        rm -rf "${__data_dir}/server/node"
+    # Move from server/testnet/node into ${__data_dir} - testnet Pebble+PBSS
+    if [ -d "${__data_dir}/server/testnet/node/geth" ]; then
+        mv "${__data_dir}/server/testnet/node/geth" "${__data_dir}"
+        rm -rf "${__data_dir}/server/testnet/node"
+    # Move from server/data-seed into ${__data_dir} - mainnet Level+HBSS
+    elif [ -d "${__data_dir}/server/data-seed/geth" ]; then
         mv "${__data_dir}/server/data-seed/geth" "${__data_dir}"
         rm -rf "${__data_dir}/server/data-seed"
+    # Move from data-seed into ${__data_dir} - testnet Level+HBSS
     elif [ -d "${__data_dir}/data-seed/geth" ]; then
         mv "${__data_dir}/data-seed/geth" "${__data_dir}"
         rm -rf "${__data_dir}/data-seed"
