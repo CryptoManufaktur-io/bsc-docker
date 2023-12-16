@@ -81,7 +81,7 @@ else
         mv "${__data_dir}/server/node/geth" "${__data_dir}"
         rm -rf "${__data_dir}/server/node"
     # Move from server/testnet/node into ${__data_dir} - testnet Pebble+PBSS
-    if [ -d "${__data_dir}/server/testnet/node/geth" ]; then
+    elif [ -d "${__data_dir}/server/testnet/node/geth" ]; then
         mv "${__data_dir}/server/testnet/node/geth" "${__data_dir}"
         rm -rf "${__data_dir}/server/testnet/node"
     # Move from server/data-seed into ${__data_dir} - mainnet Level+HBSS
