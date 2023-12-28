@@ -118,6 +118,8 @@ else
   dasel delete -f config.toml Node.LogConfig
   dasel delete -f config.toml Node.HTTPHost
   dasel delete -f config.toml Node.HTTPVirtualHosts
+  # Add path scheme, as 1.3.7 otherwise fails
+  dasel put -v "path" -f config.toml 'Eth.StateScheme'
 
   # Duplicate binance-supplied static nodes to trusted nodes
   for string in $(dasel -f config.toml -w json 'Node.P2P.StaticNodes' | jq -r .[]); do
