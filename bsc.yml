@@ -30,8 +30,6 @@ services:
       - /home/bsc/config.toml
       - --datadir
       - /home/bsc/data
-      - --state.scheme
-      - path
       - --cache
       - "8000"
       - --metrics

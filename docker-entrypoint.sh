@@ -118,8 +118,6 @@ else
   dasel delete -f config.toml Node.LogConfig
   dasel delete -f config.toml Node.HTTPHost
   dasel delete -f config.toml Node.HTTPVirtualHosts
-  # Add path scheme, as 1.3.7 otherwise fails
-  dasel put -v "path" -f config.toml 'Eth.StateScheme'
 
   # Duplicate binance-supplied static nodes to trusted nodes
   for string in $(dasel -f config.toml -w json 'Node.P2P.StaticNodes' | jq -r .[]); do
@@ -142,13 +140,15 @@ else
   # Sync from genesis if no snapshot was downloaded, above
   if [ ! -d /home/bsc/data/geth/chaindata ]; then
     echo "No SNAPSHOT provided in .env."
-    echo "Initiating PBSS sync from genesis. This will take 2-3 months."
+    echo "Initiating sync from genesis. This will take 2-3 months."
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-    geth --state.scheme path --datadir /home/bsc/data ${__ancient} init genesis.json
+    __db_format="--state.scheme path --db.engine pebble"
+  else
+    __db_format=""
   fi
 
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-  exec "$@" ${__ancient} --nat extip:${__public_ip} ${__verbosity} ${GETH_EXTRAS}
+  exec "$@" ${__ancient} ${__db_format} --nat extip:${__public_ip} ${__verbosity} ${GETH_EXTRAS}
 fi
