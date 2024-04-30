@@ -14,8 +14,8 @@ services:
       - geth-data:/home/bsc/data
       - ${ANCIENT_DIR:-.nada}:/home/bsc/ancient
     ports:
-      - 30311:30311/tcp
-      - 30311:30311/udp
+      - ${P2P_PORT}:${P2P_PORT}/tcp
+      - ${P2P_PORT}:${P2P_PORT}/udp
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - SNAPSHOT=${SNAPSHOT:-}
@@ -32,6 +32,8 @@ services:
       - /home/bsc/data
       - --cache
       - "8000"
+      - --port
+      - ${P2P_PORT:-30311}
       - --metrics
       - --metrics.addr
       - 0.0.0.0
