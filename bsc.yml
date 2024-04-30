@@ -9,7 +9,7 @@ services:
     user: "10000"
     stop_grace_period: 1m
     image: bsc-geth:local
-    pull_policy: build
+    pull_policy: never
     volumes:
       - geth-data:/home/bsc/data
       - ${ANCIENT_DIR:-.nada}:/home/bsc/ancient
