@@ -9,7 +9,7 @@ services:
       - traefik.enable=true
       - traefik.http.routers.bsc-health.service=bsc-health
       - traefik.http.routers.bsc-health.entrypoints=websecure
-      - traefik.http.routers.bsc-health.rule=Host(`${RPC_HOST}.${DOMAIN}`) && PathPrefix(`/ready/`)
+      - traefik.http.routers.bsc-health.rule=Host(`${RPC_HOST}.${DOMAIN}`) && Path(`/ready`)
       - traefik.http.routers.bsc-health.tls.certresolver=letsencrypt
       - traefik.http.services.bsc-health.loadbalancer.server.port=21171
       - metrics_scrape=true
