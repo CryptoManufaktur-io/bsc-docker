@@ -46,6 +46,7 @@ services:
       - metrics.scrape=true
       - metrics.path=/metrics
       - metrics.port=8080
+      - metrics.network=bsc-${NETWORK}
     <<: *logging
 
   cf-ddns-v4:
