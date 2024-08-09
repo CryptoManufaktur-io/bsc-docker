@@ -75,7 +75,6 @@ else
     __dont_rm=0
     aria2c -c -s14 -x14 -k100M -d ${__snap_dir} --auto-file-renaming=false --conditional-get=true \
       --allow-overwrite=true "${SNAPSHOT}"
-    tar -I lz4 -xvf "${__snap_dir}/$(basename "${SNAPSHOT}")" -C ${__data_dir}
     echo "Copy completed, extracting"
     filename=$(echo "${SNAPSHOT}" | awk -F/ '{print $NF}')
     if [[ "${filename}" =~ \.tar\.zst$ ]]; then
