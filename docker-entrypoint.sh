@@ -127,6 +127,7 @@ else
     touch /home/bsc/data/setupdone
   fi
 
+  cd /home/bsc
   # The wget was moved down here so that repeated failures with SNAPSHOT above don't exhaust
   # the github API rate limit
   wget "$(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep browser_ |grep "${NETWORK}" |cut -d\" -f4)"
