@@ -1,6 +1,0 @@
-# To be used in conjunction with bsc.yml
-services:
-  geth:
-    ports:
-      - ${RPC_PORT}:${RPC_PORT}/tcp
-      - ${WS_PORT}:${WS_PORT}/tcp
