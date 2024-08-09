@@ -170,5 +170,5 @@ else
 
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-  exec "$@" ${__ancient} ${__db_format} --nat extip:${__public_ip} ${__verbosity} ${GETH_EXTRAS}
+  exec "$@" ${__ancient} ${__db_format} --nat extip:${__public_ip} ${__verbosity} ${EXTRAS}
 fi
