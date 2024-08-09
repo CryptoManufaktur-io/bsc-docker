@@ -72,28 +72,48 @@ else
     fi
 
     mkdir -p "${__snap_dir}"
+    __dont_rm=0
     aria2c -c -s14 -x14 -k100M -d ${__snap_dir} --auto-file-renaming=false --conditional-get=true \
       --allow-overwrite=true "${SNAPSHOT}"
     tar -I lz4 -xvf "${__snap_dir}/$(basename "${SNAPSHOT}")" -C ${__data_dir}
-    rm -rf ${__data_dir}/geth
-    # Move from server/node into ${__data_dir} - mainnet Pebble+PBSS
-    if [ -d "${__data_dir}/server/node/geth" ]; then
-        mv "${__data_dir}/server/node/geth" "${__data_dir}"
-        rm -rf "${__data_dir}/server/node"
-    # Move from server/testnet/node into ${__data_dir} - testnet Pebble+PBSS
-    elif [ -d "${__data_dir}/server/testnet/node/geth" ]; then
-        mv "${__data_dir}/server/testnet/node/geth" "${__data_dir}"
-        rm -rf "${__data_dir}/server/testnet/node"
-    # Move from server/data-seed into ${__data_dir} - mainnet Level+HBSS
-    elif [ -d "${__data_dir}/server/data-seed/geth" ]; then
-        mv "${__data_dir}/server/data-seed/geth" "${__data_dir}"
-        rm -rf "${__data_dir}/server/data-seed"
-    # Move from data-seed into ${__data_dir} - testnet Level+HBSS
-    elif [ -d "${__data_dir}/data-seed/geth" ]; then
-        mv "${__data_dir}/data-seed/geth" "${__data_dir}"
-        rm -rf "${__data_dir}/data-seed"
+    echo "Copy completed, extracting"
+    filename=$(echo "${SNAPSHOT}" | awk -F/ '{print $NF}')
+    if [[ "${filename}" =~ \.tar\.zst$ ]]; then
+      pzstd -c -d "${filename}" | tar xvf - -C ${__data_dir}
+    elif [[ "${filename}" =~ \.tar\.gz$ || "${filename}" =~ \.tgz$ ]]; then
+      tar xzvf "${filename}" -C ${__data_dir}
+    elif [[ "${filename}" =~ \.tar$ ]]; then
+      tar xvf "${filename}" -C ${__data_dir}
+    elif [[ "${filename}" =~ \.lz4$ ]]; then
+      lz4 -d "${filename}" | tar xvf - -C ${__data_dir}
     else
-        echo "Unexpected SNAPSHOT directory layout. It's unlikely to work until the entrypoint script is adjusted."
+      __dont_rm=1
+      echo "The snapshot file has a format that BSC Docker can't handle."
+      echo "Please come to CryptoManufaktur Discord to work through this."
+    fi
+    if [ "${__dont_rm}" -eq 0 ]; then
+      rm -f "${filename}"
+    fi
+
+    # try to find the directory
+    __search_dir="geth/chaindata"
+    __base_dir="${__data_dir}"
+    __found_path=$(find "$__base_dir" -type d -path "*/$__search_dir" -print -quit)
+    if [ -n "$__found_path" ]; then
+      __geth_dir=$(dirname "$__found_path")
+      __geth_dir=${__geth_dir%/chaindata}
+      if [ "${__geth_dir}" = "${__base_dir}geth" ]; then
+         echo "Snapshot extracted into ${__geth_dir}/chaindata"
+      else
+        echo "Found a geth directory at ${__geth_dir}, moving it."
+        mv "$__geth_dir" "$__base_dir"
+        rm -rf "$__geth_dir"
+      fi
+    fi
+    if [[ ! -d "${__data_dir}/geth/chaindata" ]]; then
+      echo "Chaindata isn't in the expected location."
+      echo "This snapshot likely won't work until the entrypoint script has been adjusted for it."
+      exit 1
     fi
 
     if [ -n "${__ancient}" ]; then
@@ -104,7 +124,6 @@ else
         find "/home/bsc/ancient/geth/chaindata/ancient" -mindepth 1 -maxdepth 1 -exec mv {} "/home/bsc/ancient/" \;
         rm -rf "/home/bsc/ancient/geth"
     fi
-    rm -rf "${__snap_dir}"
     touch /home/bsc/data/setupdone
   fi
 
