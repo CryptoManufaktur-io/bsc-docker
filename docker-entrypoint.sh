@@ -90,6 +90,7 @@ else
       __dont_rm=1
       echo "The snapshot file has a format that BSC Docker can't handle."
       echo "Please come to CryptoManufaktur Discord to work through this."
+      exit 1
     fi
     if [ "${__dont_rm}" -eq 0 ]; then
       rm -f "${filename}"
