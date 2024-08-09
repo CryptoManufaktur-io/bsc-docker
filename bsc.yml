@@ -75,9 +75,10 @@ services:
       - traefik.http.routers.bscwslb.rule=Host(`${WS_LB}.${DOMAIN}`)
       - traefik.http.routers.bscwslb.tls.certresolver=letsencrypt
       - traefik.http.services.bscws.loadbalancer.server.port=${WS_PORT}
-      - metrics_scrape=true
-      - metrics_path=/debug/metrics/prometheus
-      - metrics_port=6060
+      - metrics.scrape=true
+      - metrics.path=/debug/metrics/prometheus
+      - metrics.port=6060
+      - metrics.network=bsc-${NETWORK}
 
   set-prune-marker:
     profiles: ["tools"]
