@@ -1,5 +1,5 @@
 # Build Geth in a stock Go builder container
-FROM golang:1.22-bookworm as builder
+FROM golang:1.22-bookworm AS builder
 
 ARG BUILD_TARGET
 
@@ -8,7 +8,7 @@ WORKDIR /src
 RUN bash -c "git clone https://github.com/bnb-chain/bsc.git && cd bsc && git config advice.detachedHead false && git fetch --all --tags && git checkout ${BUILD_TARGET} && make geth"
 
 # Get dasel
-FROM ghcr.io/tomwright/dasel:2-alpine as dasel
+FROM ghcr.io/tomwright/dasel:2-alpine AS dasel
 
 # Pull all binaries into a second stage deploy container
 FROM debian:bookworm-slim
