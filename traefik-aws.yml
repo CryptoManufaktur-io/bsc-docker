@@ -1,3 +1,4 @@
+# Consider using https://github.com/CryptoManufaktur-io/central-proxy-docker and ext-network.yml instead, not this file
 x-logging: &logging
   logging:
     driver: json-file
