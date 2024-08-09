@@ -1,0 +1,6 @@
+# To be used with bsc.yml
+services:
+  geth:
+    ports:
+      - ${SHARE_IP}:${RPC_PORT:-8545}:${RPC_PORT:-8545}/tcp
+      - ${SHARE_IP}:${WS_PORT:-8546}:${WS_PORT:-8546}/tcp

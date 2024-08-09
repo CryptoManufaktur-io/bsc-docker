@@ -1,0 +1,18 @@
+services:
+  healthmon:
+    image: ghcr.io/alexallah/ethereum-healthmon:latest
+    command:
+      - --chain=execution
+      - --addr=geth
+      - --http.addr=0.0.0.0
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.bsc-health.service=bsc-health
+      - traefik.http.routers.bsc-health.entrypoints=websecure
+      - traefik.http.routers.bsc-health.rule=Host(`${RPC_HOST}.${DOMAIN}`) && Path(`/ready`)
+      - traefik.http.routers.bsc-health.tls.certresolver=letsencrypt
+      - traefik.http.services.bsc-health.loadbalancer.server.port=21171
+      - metrics.scrape=true
+      - metrics.path=/metrics
+      - metrics.port=21171
+      - metrics.network=bsc-${NETWORK}
