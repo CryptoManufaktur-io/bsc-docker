@@ -1,5 +1,5 @@
-# Build Geth in a stock Go builder container
-FROM golang:1.22-bookworm AS builder
+# Build bsc-geth in a stock Go builder container
+FROM golang:1.23-bookworm AS builder
 
 ARG BUILD_TARGET
 
