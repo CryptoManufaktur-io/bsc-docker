@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - BUILD_TARGET=${GETH_BUILD_TARGET}
+        - BUILD_TAG=${GETH_BUILD_TAG}
     user: "10000"
     stop_grace_period: 1m
     image: bsc-geth:local

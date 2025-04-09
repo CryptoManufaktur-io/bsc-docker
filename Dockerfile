@@ -1,11 +1,11 @@
 # Build bsc-geth in a stock Go builder container
 FROM golang:1.23-bookworm AS builder
 
-ARG BUILD_TARGET
+ARG BUILD_TAG=master
 
 WORKDIR /src
 
-RUN bash -c "git clone https://github.com/bnb-chain/bsc.git && cd bsc && git config advice.detachedHead false && git fetch --all --tags && git checkout ${BUILD_TARGET} && make geth"
+RUN bash -c "git clone https://github.com/bnb-chain/bsc.git && cd bsc && git config advice.detachedHead false && git fetch --all --tags && git checkout ${BUILD_TAG} && make geth"
 
 # Get dasel
 FROM ghcr.io/tomwright/dasel:2-alpine AS dasel

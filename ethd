@@ -35,8 +35,8 @@ __env_migrate() {
     return 0
   fi
 
-  __old_vars=( CF_API_TOKEN SNAPSHOT_FILE GETH_EXTRAS )
-  __new_vars=( CF_DNS_API_TOKEN SNAPSHOT EXTRAS )
+  __old_vars=( CF_API_TOKEN SNAPSHOT_FILE GETH_EXTRAS GETH_BUILD_TARGET )
+  __new_vars=( CF_DNS_API_TOKEN SNAPSHOT EXTRAS GETH_BUILD_TAG )
 
   __var=ENV_VERSION
   __get_value_from_env "${__var}" "default.env" "__target_ver"
