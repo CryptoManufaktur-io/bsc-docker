@@ -18,7 +18,7 @@ version() {
 # Client versions
   case "${__value}" in
     *bsc.yml* )
-      docompose exec geth geth version
+      __docompose exec geth geth version
       echo
       ;;&
   esac
