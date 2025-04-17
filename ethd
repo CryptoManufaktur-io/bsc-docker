@@ -958,11 +958,6 @@ prune-geth() {
         exit 1
     fi
 
-    if ! grep -q '^COMPOSE_FILE=.*bsc\.yml' "${ENV_FILE}" 2>/dev/null ; then
-        echo "You do not appear to be using Geth, aborting."
-        exit 1
-    fi
-
     __docker_dir=$(docker system info --format '{{.DockerRootDir}}')
 
     if [ "$(df -P "${__docker_dir}" | awk '/[0-9]%/{print $(NF-2)}')" -lt 41943040 ]; then
@@ -982,7 +977,7 @@ prune-geth() {
         rpc_port="${BASH_REMATCH[1]}"
     fi
 
-    sync_status=$(docompose exec -T geth wget -qO- "http://localhost:$rpc_port" --header 'Content-Type: application/json' --post-data '{"jsonrpc":"2.0","method":"eth_syncing","params":[],"id":1}')
+    sync_status=$(__docompose exec -T geth wget -qO- "http://localhost:$rpc_port" --header 'Content-Type: application/json' --post-data '{"jsonrpc":"2.0","method":"eth_syncing","params":[],"id":1}')
     exitstatus=$?
     if [ $exitstatus -ne 0 ]; then
         echo "Unable to connect to Geth: Is it running?"
@@ -999,7 +994,7 @@ prune-geth() {
         exit 1
     fi
 
-    node_logs=$(docompose logs --no-color --tail 1000 geth)
+    node_logs=$(__docompose logs --no-color --tail 1000 geth)
     if [[ "${node_logs}" =~ "snapshot generation" && ! "${node_logs}" =~ "Generated state" ]]; then
         echo "Geth has not finished generating a state snapshot yet, aborting."
         exit 1
@@ -1030,8 +1025,8 @@ prune-geth() {
     echo ""
     echo "Starting Geth ancient block prune"
     echo ""
-    docompose run --rm set-prune-marker "touch /home/bsc/data/prune-marker"
-    docompose stop geth && docompose rm -f geth
+    __docompose run --rm set-prune-marker "touch /home/bsc/data/prune-marker"
+    __docompose stop geth && __docompose rm -f geth
     start
     echo
       echo "Prune is running, you can observe it with \"${__me} logs -f geth\""
