@@ -56,7 +56,7 @@ else
     # Download snapshot
     cd "${__snap_dir}"
     wget https://raw.githubusercontent.com/bnb-chain/bsc-snapshots/main/dist/fetch-snapshot.sh
-    bash fetch-snapshot.sh -d -c -D "${__snap_dir}" "${SNAPSHOT}"
+    bash fetch-snapshot.sh -d -D "${__snap_dir}" "${SNAPSHOT}"
     bash fetch-snapshot.sh -e -D "${__snap_dir}" -E "${__data_dir}" "${SNAPSHOT}"
     rm -rf "${__snap_dir}/*"
 
