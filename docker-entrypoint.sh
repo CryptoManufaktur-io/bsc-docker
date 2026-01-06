@@ -56,8 +56,8 @@ else
     # Download snapshot
     cd "${__snap_dir}"
     wget -O $SNAPSHOT.csv https://raw.githubusercontent.com/bnb-chain/bsc-snapshots/main/dist/$SNAPSHOT.csv
-    if [[ -s "$SNAPSHOT" ]] && [[ $(tail -c 1 "$SNAPSHOT") != $'\n' ]]; then
-        echo >> "$SNAPSHOT"
+    if [[ -s "$SNAPSHOT.csv" ]] && [[ $(tail -c 1 "$SNAPSHOT.csv") != $'\n' ]]; then
+        echo >> "$SNAPSHOT.csv"
     fi
 
     wget https://raw.githubusercontent.com/bnb-chain/bsc-snapshots/main/dist/fetch-snapshot.sh
