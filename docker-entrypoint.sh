@@ -51,50 +51,19 @@ else
        __snap_dir=/home/bsc/data/snapshot
        __data_dir=/home/bsc/data
     fi
-    # Check for enough space
-
-    __free_space=$(df -P "${__data_dir}" | awk '/[0-9]%/{print $(NF-2)}')
-    if [ -z "$__free_space" ]; then
-        echo "Unable to determine free disk space. This is a bug."
-        echo "Aborting"
-        exit 1
-    fi
-    __filesize=$(curl -Is "${SNAPSHOT}" | grep -i Content-Length | awk '{print $2}')
-    __filesize=${__filesize%$'\r'}
-    if [ -z "$__filesize" ]; then
-        echo "Unable to determine SNAPSHOT size, downloading optimistically"
-    elif (( __filesize * 2 + 1073741824 > __free_space * 1024 )); then
-        __free_gib=$(( __free_space / 1024 / 1024 ))
-        __file_gib=$(( __filesize / 1024 / 1024 / 1024 ))
-        echo "SNAPSHOT is $__file_gib GiB and you have $__free_gib GiB free."
-        echo "You need at least 2x the size of the snapshot plus a safety buffer of 10 GiB."
-        echo "Continuing anyway, but that may fail."
-    fi
-
     mkdir -p "${__snap_dir}"
-    __dont_rm=0
-    aria2c -c -s14 -x14 -k100M -d ${__snap_dir} --auto-file-renaming=false --conditional-get=true \
-      --allow-overwrite=true "${SNAPSHOT}"
-    echo "Copy completed, extracting"
+
+    # Download snapshot
     cd "${__snap_dir}"
-    filename=$(echo "${SNAPSHOT}" | awk -F/ '{print $NF}')
-    if [[ "${filename}" =~ \.tar\.zst$ ]]; then
-      pzstd -c -d "${filename}" | tar xvf - -C ${__data_dir}
-    elif [[ "${filename}" =~ \.tar\.gz$ || "${filename}" =~ \.tgz$ ]]; then
-      tar xzvf "${filename}" -C ${__data_dir}
-    elif [[ "${filename}" =~ \.tar$ ]]; then
-      tar xvf "${filename}" -C ${__data_dir}
-    elif [[ "${filename}" =~ \.lz4$ ]]; then
-      lz4 -d "${filename}" | tar xvf - -C ${__data_dir}
-    else
-      __dont_rm=1
-      echo "The snapshot file has a format that BSC Docker can't handle."
-      echo "Please come to CryptoManufaktur Discord to work through this."
-      exit 1
+    wget -O "${SNAPSHOT}".csv https://raw.githubusercontent.com/bnb-chain/bsc-snapshots/main/dist/"${SNAPSHOT}".csv
+    if [[ -s "$SNAPSHOT.csv" ]] && [[ $(tail -c 1 "$SNAPSHOT.csv") != $'\n' ]]; then
+        echo >> "$SNAPSHOT.csv"
     fi
-    if [ "${__dont_rm}" -eq 0 ]; then
-      rm -f "${filename}"
-    fi
+
+    wget https://raw.githubusercontent.com/bnb-chain/bsc-snapshots/main/dist/fetch-snapshot.sh
+    bash fetch-snapshot.sh -d -D "${__snap_dir}" "${SNAPSHOT}"
+    bash fetch-snapshot.sh -e -D "${__snap_dir}" -E "${__data_dir}" "${SNAPSHOT}"
+    rm -rf "${__snap_dir:?}/"
 
     # try to find the directory
     __search_dir="geth/chaindata"
