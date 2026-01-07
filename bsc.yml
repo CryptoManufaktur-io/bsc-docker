@@ -1,3 +1,11 @@
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: 100m
+      max-file: "3"
+      tag: '{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}'
+
 services:
   geth:
     restart: unless-stopped
@@ -23,6 +31,7 @@ services:
       - ANCIENT_DIR=${ANCIENT_DIR}
       - NETWORK=${NETWORK}
       - EXTRAS=${EXTRAS:-}
+    <<: *logging
     entrypoint:
       - docker-entrypoint.sh
       - geth
