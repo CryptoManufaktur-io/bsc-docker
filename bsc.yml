@@ -31,6 +31,7 @@ services:
       - ANCIENT_DIR=${ANCIENT_DIR}
       - NETWORK=${NETWORK}
       - EXTRAS=${EXTRAS:-}
+      - GETH_BUILD_TAG=${GETH_BUILD_TAG}
     <<: *logging
     entrypoint:
       - docker-entrypoint.sh
