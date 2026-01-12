@@ -35,8 +35,8 @@ fi
 if [ -f /home/bsc/data/prune-marker ]; then
   rm -f /home/bsc/data/prune-marker
 
-  wget "$(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep browser_ |grep "${NETWORK}" |cut -d\" -f4)"
-  unzip -o "${NETWORK}".zip
+  wget "https://github.com/bnb-chain/bsc/releases/download/${GETH_BUILD_TAG}/${NETWORK}.zip"
+  unzip -j "${NETWORK}".zip -d /home/bsc
   rm "${NETWORK}".zip
 
 # Word splitting is desired for the command line parameters
@@ -100,8 +100,8 @@ else
   cd /home/bsc
   # The wget was moved down here so that repeated failures with SNAPSHOT above don't exhaust
   # the github API rate limit
-  wget "$(curl -s https://api.github.com/repos/bnb-chain/bsc/releases/latest |grep browser_ |grep "${NETWORK}" |cut -d\" -f4)"
-  unzip -o "${NETWORK}".zip
+  wget "https://github.com/bnb-chain/bsc/releases/download/${GETH_BUILD_TAG}/${NETWORK}.zip"
+  unzip -j "${NETWORK}".zip -d /home/bsc
   rm "${NETWORK}".zip
 
   # Remove unwanted settings in config.toml
