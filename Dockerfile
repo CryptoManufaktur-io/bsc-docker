@@ -1,5 +1,5 @@
 # Build bsc-geth in a stock Go builder container
-FROM golang:1.24-bookworm AS builder
+FROM golang:1.25-bookworm AS builder
 
 ARG BUILD_TAG=master
 
